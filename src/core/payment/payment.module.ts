@@ -1,8 +1,14 @@
-/**
- * Payment Module
- * 
- * Manages subscription plans, payment processing, and billing.
- * Integrates with third-party payment providers like Stripe.
- */
+// Updated: Payment module configuration
 
-// Payment module implementation will be added here
+import { Module } from '@nestjs/common';
+import { PaymentService } from './payment.service';
+import { PaymentController } from './payment.controller';
+
+@Module({
+  controllers: [PaymentController],
+  providers: [PaymentService],
+  exports: [PaymentService],
+})
+export class PaymentModule {}
+
+// ============================================
