@@ -1,8 +1,11 @@
-/**
- * Webhook Module
- * 
- * Handles incoming webhooks from external services.
- * Processes events from payment providers, integrations, etc.
- */
+//  Webhook module for handling external service webhooks
 
-// Webhook module implementation will be added here
+import { Module } from '@nestjs/common';
+import { WebhookController } from './webhook.controller';
+
+@Module({
+  controllers: [WebhookController],
+})
+export class WebhookModule {}
+
+// ============================================

@@ -1,4 +1,4 @@
-// Updated: Email provider implementation (using nodemailer)
+//  Email provider implementation (using nodemailer)
 
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -75,7 +75,8 @@ export class EmailProvider implements NotificationProvider {
       const recipients = Array.isArray(to) ? to.join(', ') : to;
 
       const mailOptions = {
-        from: options?.from || this.configService.get<string>('SMTP_FROM', 'noreply@claritybridge.com'),
+        from:
+          options?.from || this.configService.get<string>('SMTP_FROM', 'noreply@claritybridge.com'),
         to: recipients,
         subject,
         text: content.text,

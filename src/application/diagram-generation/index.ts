@@ -1,4 +1,4 @@
-// Updated: Barrel export for diagram generation module
+//  Barrel export for diagram generation module
 
 export * from './diagram-generation.module';
 export * from './diagram-generation.service';

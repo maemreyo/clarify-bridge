@@ -1,4 +1,4 @@
-// Updated: Notification DTOs
+//  Notification DTOs
 
 import { IsString, IsEnum, IsOptional, IsObject, IsArray, IsEmail } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';

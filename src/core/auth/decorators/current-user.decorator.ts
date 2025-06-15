@@ -1,4 +1,4 @@
-// Updated: Current user decorator
+//  Current user decorator
 
 import { createParamDecorator, ExecutionContext } from '@nestjs/common';
 

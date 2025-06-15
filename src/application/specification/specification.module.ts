@@ -1,4 +1,4 @@
-// Updated: Specification module configuration
+//  Specification module configuration
 
 import { Module, forwardRef } from '@nestjs/common';
 import { SpecificationService } from './specification.service';

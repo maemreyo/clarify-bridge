@@ -1,4 +1,4 @@
-// Updated: Multi-view generation module configuration
+//  Multi-view generation module configuration
 
 import { Module } from '@nestjs/common';
 import { MultiViewGenerationService } from './multi-view-generation.service';

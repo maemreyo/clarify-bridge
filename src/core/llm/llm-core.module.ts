@@ -1,4 +1,4 @@
-// Updated: LLM Core module configuration
+//  LLM Core module configuration
 
 import { Module, Global } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
@@ -13,12 +13,7 @@ import { AnthropicProvider } from './providers/anthropic.provider';
 @Global()
 @Module({
   imports: [ConfigModule],
-  providers: [
-    LlmCoreService,
-    OpenAIProvider,
-    GoogleGenAIProvider,
-    AnthropicProvider,
-  ],
+  providers: [LlmCoreService, OpenAIProvider, GoogleGenAIProvider, AnthropicProvider],
   exports: [LlmCoreService],
 })
 export class LlmCoreModule {}

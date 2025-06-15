@@ -1,4 +1,4 @@
-// Updated: Team management controller
+//  Team management controller
 
 import {
   Controller,
@@ -12,13 +12,7 @@ import {
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
-import {
-  ApiTags,
-  ApiOperation,
-  ApiResponse,
-  ApiBearerAuth,
-  ApiParam,
-} from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam } from '@nestjs/swagger';
 import { TeamService } from './team.service';
 import {
   CreateTeamDto,
@@ -53,10 +47,12 @@ export class TeamController {
 
   @Get()
   @ApiOperation({ summary: 'Get all teams for current user' })
-  @ApiResponse({ status: 200, description: 'Teams retrieved successfully', type: [TeamResponseDto] })
-  async getUserTeams(
-    @CurrentUser('id') userId: string,
-  ): Promise<TeamResponseDto[]> {
+  @ApiResponse({
+    status: 200,
+    description: 'Teams retrieved successfully',
+    type: [TeamResponseDto],
+  })
+  async getUserTeams(@CurrentUser('id') userId: string): Promise<TeamResponseDto[]> {
     return this.teamService.getUserTeams(userId);
   }
 
@@ -65,9 +61,7 @@ export class TeamController {
   @ApiOperation({ summary: 'Get team details' })
   @ApiParam({ name: 'teamId', description: 'Team ID' })
   @ApiResponse({ status: 200, description: 'Team retrieved successfully', type: TeamResponseDto })
-  async getTeam(
-    @Param('teamId') teamId: string,
-  ): Promise<TeamResponseDto> {
+  async getTeam(@Param('teamId') teamId: string): Promise<TeamResponseDto> {
     return this.teamService.getTeamById(teamId);
   }
 
@@ -75,10 +69,12 @@ export class TeamController {
   @UseGuards(TeamMemberGuard)
   @ApiOperation({ summary: 'Get team with members' })
   @ApiParam({ name: 'teamId', description: 'Team ID' })
-  @ApiResponse({ status: 200, description: 'Team with members retrieved successfully', type: TeamWithMembersDto })
-  async getTeamWithMembers(
-    @Param('teamId') teamId: string,
-  ): Promise<TeamWithMembersDto> {
+  @ApiResponse({
+    status: 200,
+    description: 'Team with members retrieved successfully',
+    type: TeamWithMembersDto,
+  })
+  async getTeamWithMembers(@Param('teamId') teamId: string): Promise<TeamWithMembersDto> {
     return this.teamService.getTeamWithMembers(teamId);
   }
 
@@ -130,7 +126,11 @@ export class TeamController {
   @ApiOperation({ summary: 'Update member role (owner only)' })
   @ApiParam({ name: 'teamId', description: 'Team ID' })
   @ApiParam({ name: 'memberId', description: 'Member ID' })
-  @ApiResponse({ status: 200, description: 'Member role updated successfully', type: TeamMemberDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Member role updated successfully',
+    type: TeamMemberDto,
+  })
   async updateMemberRole(
     @Param('teamId') teamId: string,
     @Param('memberId') memberId: string,

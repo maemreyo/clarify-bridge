@@ -1,4 +1,4 @@
-// Updated: Cross-view consistency validator
+//  Cross-view consistency validator
 
 import { Injectable } from '@nestjs/common';
 import { GeneratedViews } from '@application/specification/interfaces/specification.interface';
@@ -22,7 +22,10 @@ export class CrossViewValidator {
 
     // Check Frontend to Backend consistency
     if (views.frontendView && views.backendView) {
-      const frontendBackendIssues = this.validateFrontendToBackend(views.frontendView, views.backendView);
+      const frontendBackendIssues = this.validateFrontendToBackend(
+        views.frontendView,
+        views.backendView,
+      );
       issues.push(...frontendBackendIssues);
       score -= frontendBackendIssues.length * 0.05;
     }
@@ -48,9 +51,10 @@ export class CrossViewValidator {
 
     // Check if all user stories have corresponding UI components
     pmView.userStories.forEach(story => {
-      const hasComponent = frontendView.components.some(comp =>
-        comp.description.toLowerCase().includes(story.title.toLowerCase()) ||
-        comp.name.toLowerCase().includes(story.title.toLowerCase().replace(/\s+/g, ''))
+      const hasComponent = frontendView.components.some(
+        comp =>
+          comp.description.toLowerCase().includes(story.title.toLowerCase()) ||
+          comp.name.toLowerCase().includes(story.title.toLowerCase().replace(/\s+/g, '')),
       );
 
       if (!hasComponent) {
@@ -78,9 +82,7 @@ export class CrossViewValidator {
       if (route.path === '/' || route.path.includes(':')) return; // Skip root and dynamic routes
 
       const routeBase = route.path.split('/')[1];
-      const hasEndpoint = backendView.endpoints.some(endpoint =>
-        endpoint.path.includes(routeBase)
-      );
+      const hasEndpoint = backendView.endpoints.some(endpoint => endpoint.path.includes(routeBase));
 
       if (!hasEndpoint) {
         issues.push({
@@ -97,8 +99,8 @@ export class CrossViewValidator {
     if (frontendView.stateManagement.stores && frontendView.stateManagement.stores.length > 0) {
       frontendView.stateManagement.stores.forEach(store => {
         const storeName = store.replace('Store', '');
-        const hasModel = backendView.dataModels.some(model =>
-          model.name.toLowerCase() === storeName.toLowerCase()
+        const hasModel = backendView.dataModels.some(
+          model => model.name.toLowerCase() === storeName.toLowerCase(),
         );
 
         if (!hasModel) {
@@ -135,7 +137,7 @@ export class CrossViewValidator {
         if (entityMatch) {
           const entity = entityMatch[1];
           const hasEndpoints = backendView.endpoints.some(endpoint =>
-            endpoint.path.toLowerCase().includes(entity.toLowerCase())
+            endpoint.path.toLowerCase().includes(entity.toLowerCase()),
           );
 
           if (!hasEndpoints) {
@@ -152,8 +154,8 @@ export class CrossViewValidator {
     });
 
     // Check if non-functional requirements are addressed
-    const performanceRequired = pmView.requirements.nonFunctional.some(req =>
-      req.toLowerCase().includes('performance') || req.toLowerCase().includes('speed')
+    const performanceRequired = pmView.requirements.nonFunctional.some(
+      req => req.toLowerCase().includes('performance') || req.toLowerCase().includes('speed'),
     );
 
     if (performanceRequired && !backendView.infrastructure.caching) {

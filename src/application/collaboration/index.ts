@@ -1,4 +1,4 @@
-// Updated: Barrel export for collaboration module
+//  Barrel export for collaboration module
 
 export * from './collaboration.module';
 export * from './collaboration.service';

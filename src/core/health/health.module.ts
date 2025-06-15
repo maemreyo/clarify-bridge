@@ -1,4 +1,4 @@
-// Updated: Health module configuration
+//  Health module configuration
 
 import { Module } from '@nestjs/common';
 import { TerminusModule } from '@nestjs/terminus';
@@ -10,10 +10,7 @@ import { LlmHealthIndicator } from './indicators/llm.health';
 import { VectorDbHealthIndicator } from './indicators/vector-db.health';
 
 @Module({
-  imports: [
-    TerminusModule,
-    HttpModule,
-  ],
+  imports: [TerminusModule, HttpModule],
   controllers: [HealthController],
   providers: [
     DatabaseHealthIndicator,

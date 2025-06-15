@@ -1,4 +1,4 @@
-// Updated: Usage tracking module configuration
+//  Usage tracking module configuration
 
 import { Module, Global } from '@nestjs/common';
 import { UsageService } from './usage.service';

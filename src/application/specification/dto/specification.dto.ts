@@ -1,4 +1,4 @@
-// Updated: Specification DTOs for all operations
+//  Specification DTOs for all operations
 
 import {
   IsString,

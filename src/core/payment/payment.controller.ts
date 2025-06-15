@@ -1,4 +1,4 @@
-// Updated: Payment endpoints
+//  Payment endpoints
 
 import {
   Controller,
@@ -55,10 +55,7 @@ export class PaymentController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Update subscription plan' })
   @ApiResponse({ status: 200, description: 'Subscription updated' })
-  async updateSubscription(
-    @CurrentUser('id') userId: string,
-    @Body() dto: UpdateSubscriptionDto,
-  ) {
+  async updateSubscription(@CurrentUser('id') userId: string, @Body() dto: UpdateSubscriptionDto) {
     await this.paymentService.updateSubscription(userId, dto);
     return { message: 'Subscription updated successfully' };
   }
@@ -83,10 +80,7 @@ export class PaymentController {
     @CurrentUser('id') userId: string,
     @Body() dto: CreateCustomerPortalSessionDto,
   ) {
-    const portalUrl = await this.paymentService.createCustomerPortalSession(
-      userId,
-      dto.returnUrl,
-    );
+    const portalUrl = await this.paymentService.createCustomerPortalSession(userId, dto.returnUrl);
 
     return { url: portalUrl };
   }
@@ -104,10 +98,7 @@ export class PaymentController {
   @Public()
   @HttpCode(HttpStatus.OK)
   @ApiExcludeEndpoint()
-  async handleWebhook(
-    @Body() rawBody: string,
-    @Headers('stripe-signature') signature: string,
-  ) {
+  async handleWebhook(@Body() rawBody: string, @Headers('stripe-signature') signature: string) {
     await this.paymentService.handleWebhookEvent(rawBody, signature);
     return { received: true };
   }

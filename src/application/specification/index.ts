@@ -1,4 +1,4 @@
-// Updated: Barrel export for specification module
+//  Barrel export for specification module
 
 export * from './specification.module';
 export * from './specification.service';

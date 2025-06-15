@@ -1,4 +1,4 @@
-// Updated: Team member access guard
+//  Team member access guard
 
 import { Injectable, CanActivate, ExecutionContext, ForbiddenException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
@@ -6,7 +6,8 @@ import { TeamRole } from '@prisma/client';
 import { PrismaService } from '@core/database';
 
 export const TEAM_ROLES_KEY = 'teamRoles';
-export const TeamRoles = (...roles: TeamRole[]) =>
+export const TeamRoles =
+  (...roles: TeamRole[]) =>
   (target: any, key?: string | symbol, descriptor?: any) => {
     if (descriptor) {
       Reflect.defineMetadata(TEAM_ROLES_KEY, roles, descriptor.value);
@@ -24,10 +25,10 @@ export class TeamMemberGuard implements CanActivate {
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const requiredRoles = this.reflector.getAllAndOverride<TeamRole[]>(
-      TEAM_ROLES_KEY,
-      [context.getHandler(), context.getClass()],
-    );
+    const requiredRoles = this.reflector.getAllAndOverride<TeamRole[]>(TEAM_ROLES_KEY, [
+      context.getHandler(),
+      context.getClass(),
+    ]);
 
     const request = context.switchToHttp().getRequest();
     const user = request.user;
@@ -62,9 +63,7 @@ export class TeamMemberGuard implements CanActivate {
     const hasRequiredRole = requiredRoles.includes(teamMember.role);
 
     if (!hasRequiredRole) {
-      throw new ForbiddenException(
-        `You need one of these roles: ${requiredRoles.join(', ')}`,
-      );
+      throw new ForbiddenException(`You need one of these roles: ${requiredRoles.join(', ')}`);
     }
 
     return true;

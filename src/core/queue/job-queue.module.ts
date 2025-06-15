@@ -1,4 +1,4 @@
-// Updated: Job Queue module configuration
+//  Job Queue module configuration
 
 import { Module, Global } from '@nestjs/common';
 import { BullModule } from '@nestjs/bull';

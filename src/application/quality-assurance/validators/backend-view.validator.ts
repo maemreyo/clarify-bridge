@@ -1,8 +1,12 @@
-// Updated: Backend view quality validator
+//  Backend view quality validator
 
 import { Injectable } from '@nestjs/common';
 import { GeneratedViews } from '@application/specification/interfaces/specification.interface';
-import { QualityIssue, IssueType, ViewQualityScore } from '../interfaces/quality-assurance.interface';
+import {
+  QualityIssue,
+  IssueType,
+  ViewQualityScore,
+} from '../interfaces/quality-assurance.interface';
 
 @Injectable()
 export class BackendViewValidator {
@@ -94,9 +98,8 @@ export class BackendViewValidator {
     } else {
       backendView.dataModels.forEach((model, index) => {
         // Check for ID field
-        const hasId = model.fields.some(f =>
-          f.name.toLowerCase() === 'id' ||
-          f.name.toLowerCase().endsWith('id')
+        const hasId = model.fields.some(
+          f => f.name.toLowerCase() === 'id' || f.name.toLowerCase().endsWith('id'),
         );
 
         if (!hasId) {
@@ -152,12 +155,11 @@ export class BackendViewValidator {
     }
 
     // Calculate overall score
-    const overall = (
+    const overall =
       scores.completeness * 0.4 +
       scores.clarity * 0.2 +
       scores.consistency * 0.2 +
-      scores.technicalAccuracy * 0.2
-    );
+      scores.technicalAccuracy * 0.2;
 
     return {
       score: {

@@ -1,4 +1,4 @@
-// Updated: Core LLM service with provider management and fallback
+//  Core LLM service with provider management and fallback
 
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -37,17 +37,12 @@ export class LlmCoreService implements OnModuleInit {
 
   async onModuleInit() {
     // Register providers
-    this.providers = [
-      this.openAIProvider,
-      this.googleGenAIProvider,
-      this.anthropicProvider,
-    ].sort((a, b) => a.priority - b.priority);
+    this.providers = [this.openAIProvider, this.googleGenAIProvider, this.anthropicProvider].sort(
+      (a, b) => a.priority - b.priority,
+    );
 
     // Register embedding providers
-    this.embeddingProviders = [
-      this.openAIProvider,
-      this.googleGenAIProvider,
-    ];
+    this.embeddingProviders = [this.openAIProvider, this.googleGenAIProvider];
 
     // Check availability
     await this.checkProviderAvailability();
@@ -186,24 +181,21 @@ export class LlmCoreService implements OnModuleInit {
 
   private selectEmbeddingProvider(preferredProvider?: string): LLMEmbeddingProvider | null {
     if (preferredProvider) {
-      const provider = this.embeddingProviders.find(
-        p => (p as any).name === preferredProvider
-      );
+      const provider = this.embeddingProviders.find(p => (p as any).name === preferredProvider);
       if (provider && this.availableProviders.has((provider as any).name)) {
         return provider;
       }
     }
 
     // Return first available embedding provider
-    return this.embeddingProviders.find(
-      p => this.availableProviders.has((p as any).name)
-    ) || null;
+    return this.embeddingProviders.find(p => this.availableProviders.has((p as any).name)) || null;
   }
 
   private getFallbackProvider(excludeProvider: string): LLMProvider | null {
-    return this.providers.find(
-      p => p.name !== excludeProvider && this.availableProviders.has(p.name)
-    ) || null;
+    return (
+      this.providers.find(p => p.name !== excludeProvider && this.availableProviders.has(p.name)) ||
+      null
+    );
   }
 
   private fillTemplate(template: string, variables?: Record<string, any>): string {

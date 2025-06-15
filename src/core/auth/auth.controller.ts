@@ -1,4 +1,4 @@
-// Updated: Authentication controller with all endpoints
+//  Authentication controller with all endpoints
 
 import {
   Controller,
@@ -71,10 +71,7 @@ export class AuthController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Update user profile' })
   @ApiResponse({ status: 200, description: 'Profile successfully updated' })
-  async updateProfile(
-    @CurrentUser('id') userId: string,
-    @Body() dto: UpdateProfileDto,
-  ) {
+  async updateProfile(@CurrentUser('id') userId: string, @Body() dto: UpdateProfileDto) {
     return this.authService.updateProfile(userId, dto);
   }
 
@@ -88,11 +85,7 @@ export class AuthController {
     @CurrentUser('id') userId: string,
     @Body() dto: { currentPassword: string; newPassword: string },
   ) {
-    await this.authService.changePassword(
-      userId,
-      dto.currentPassword,
-      dto.newPassword,
-    );
+    await this.authService.changePassword(userId, dto.currentPassword, dto.newPassword);
   }
 }
 

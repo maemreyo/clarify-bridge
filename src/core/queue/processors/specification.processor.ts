@@ -1,4 +1,4 @@
-// Updated: Specification job processor
+//  Specification job processor
 
 import { Process, Processor } from '@nestjs/bull';
 import { Job } from 'bull';
@@ -77,14 +77,10 @@ export class SpecificationProcessor {
       await job.progress(90);
 
       // Send notification
-      await this.notificationService.sendNotification(
-        userId!,
-        'SPEC_COMPLETED',
-        {
-          specificationId: specification.id,
-          title: specification.title,
-        },
-      );
+      await this.notificationService.sendNotification(userId!, 'SPEC_COMPLETED', {
+        specificationId: specification.id,
+        title: specification.title,
+      });
 
       await job.progress(100);
 
@@ -96,10 +92,7 @@ export class SpecificationProcessor {
         },
       };
     } catch (error) {
-      this.logger.error(
-        `Failed to process specification generation job ${job.id}`,
-        error,
-      );
+      this.logger.error(`Failed to process specification generation job ${job.id}`, error);
 
       return {
         success: false,
@@ -125,10 +118,7 @@ export class SpecificationProcessor {
         data: result,
       };
     } catch (error) {
-      this.logger.error(
-        `Failed to process specification update job ${job.id}`,
-        error,
-      );
+      this.logger.error(`Failed to process specification update job ${job.id}`, error);
 
       return {
         success: false,
@@ -170,15 +160,11 @@ export class SpecificationProcessor {
 
       // Send notification if quality is below threshold
       if (qualityResult.overallScore < 0.7) {
-        await this.notificationService.sendNotification(
-          userId!,
-          'QUALITY_ALERT',
-          {
-            specificationId: payload.specificationId,
-            score: qualityResult.overallScore,
-            issues: qualityResult.issues,
-          },
-        );
+        await this.notificationService.sendNotification(userId!, 'QUALITY_ALERT', {
+          specificationId: payload.specificationId,
+          score: qualityResult.overallScore,
+          issues: qualityResult.issues,
+        });
       }
 
       return {

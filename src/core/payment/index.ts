@@ -1,4 +1,4 @@
-// Updated: Barrel export for payment module
+//  Barrel export for payment module
 
 export * from './payment.module';
 export * from './payment.service';

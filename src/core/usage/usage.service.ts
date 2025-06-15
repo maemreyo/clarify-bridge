@@ -1,4 +1,4 @@
-// Updated: Usage tracking and quota management service
+//  Usage tracking and quota management service
 
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -58,7 +58,9 @@ export class UsageService {
         }
       }
 
-      this.logger.debug(`Tracked usage: ${action} for user ${options.userId} team ${options.teamId}`);
+      this.logger.debug(
+        `Tracked usage: ${action} for user ${options.userId} team ${options.teamId}`,
+      );
     } catch (error) {
       this.logger.error(`Failed to track usage: ${error.message}`);
       // Don't throw - usage tracking should not break the main flow
@@ -68,10 +70,7 @@ export class UsageService {
   /**
    * Check if user can perform action based on quota
    */
-  async checkUserQuota(
-    userId: string,
-    action: UsageAction,
-  ): Promise<UsageCheckResult> {
+  async checkUserQuota(userId: string, action: UsageAction): Promise<UsageCheckResult> {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
       include: { subscription: true },
@@ -158,10 +157,7 @@ export class UsageService {
   /**
    * Check if team can perform action based on quota
    */
-  async checkTeamQuota(
-    teamId: string,
-    action: UsageAction,
-  ): Promise<UsageCheckResult> {
+  async checkTeamQuota(teamId: string, action: UsageAction): Promise<UsageCheckResult> {
     const team = await this.prisma.team.findUnique({
       where: { id: teamId },
       include: {
@@ -239,11 +235,7 @@ export class UsageService {
   /**
    * Get user usage statistics
    */
-  async getUserUsageStats(
-    userId: string,
-    startDate?: Date,
-    endDate?: Date,
-  ): Promise<UsageStats> {
+  async getUserUsageStats(userId: string, startDate?: Date, endDate?: Date): Promise<UsageStats> {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
     });
@@ -267,11 +259,7 @@ export class UsageService {
   /**
    * Get team usage statistics
    */
-  async getTeamUsageStats(
-    teamId: string,
-    startDate?: Date,
-    endDate?: Date,
-  ): Promise<UsageStats> {
+  async getTeamUsageStats(teamId: string, startDate?: Date, endDate?: Date): Promise<UsageStats> {
     const team = await this.prisma.team.findUnique({
       where: { id: teamId },
       include: {
@@ -338,17 +326,19 @@ export class UsageService {
 
     const [totalUsers, activeUsers, totalSpecs, totalGenerations] = await Promise.all([
       this.prisma.user.count(),
-      this.prisma.usageLog.groupBy({
-        by: ['userId'],
-        where: {
-          createdAt: {
-            gte: currentMonth.start,
-            lte: currentMonth.end,
+      this.prisma.usageLog
+        .groupBy({
+          by: ['userId'],
+          where: {
+            createdAt: {
+              gte: currentMonth.start,
+              lte: currentMonth.end,
+            },
+            userId: { not: null },
           },
-          userId: { not: null },
-        },
-        _count: true,
-      }).then(results => results.length),
+          _count: true,
+        })
+        .then(results => results.length),
       this.prisma.usageLog.count({
         where: {
           action: 'spec_generated',
@@ -399,11 +389,7 @@ export class UsageService {
 
   // Private helper methods
 
-  private async getUserUsageForPeriod(
-    userId: string,
-    startDate: Date,
-    endDate: Date,
-  ) {
+  private async getUserUsageForPeriod(userId: string, startDate: Date, endDate: Date) {
     const logs = await this.prisma.usageLog.groupBy({
       by: ['action'],
       where: {
@@ -444,11 +430,7 @@ export class UsageService {
     return usage;
   }
 
-  private async getTeamUsageForPeriod(
-    teamId: string,
-    startDate: Date,
-    endDate: Date,
-  ) {
+  private async getTeamUsageForPeriod(teamId: string, startDate: Date, endDate: Date) {
     const logs = await this.prisma.usageLog.groupBy({
       by: ['action'],
       where: {

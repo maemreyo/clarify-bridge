@@ -1,4 +1,4 @@
-// Updated: Database health indicator
+//  Database health indicator
 
 import { Injectable } from '@nestjs/common';
 import { HealthIndicator, HealthIndicatorResult, HealthCheckError } from '@nestjs/terminus';

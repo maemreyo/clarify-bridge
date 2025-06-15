@@ -1,4 +1,4 @@
-// Updated: Payment module configuration
+//  Payment module configuration
 
 import { Module } from '@nestjs/common';
 import { PaymentService } from './payment.service';

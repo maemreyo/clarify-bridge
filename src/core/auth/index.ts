@@ -1,4 +1,4 @@
-// Updated: Barrel export for auth module
+//  Barrel export for auth module
 
 export * from './auth.module';
 export * from './auth.service';

@@ -1,4 +1,4 @@
-// Updated: Collaboration DTOs
+//  Collaboration DTOs
 
 import {
   IsString,
@@ -18,7 +18,9 @@ export class CreateCommentDto {
   @MaxLength(2000)
   content: string;
 
-  @ApiPropertyOptional({ description: 'Section of specification (pm_view, frontend_view, backend_view)' })
+  @ApiPropertyOptional({
+    description: 'Section of specification (pm_view, frontend_view, backend_view)',
+  })
   @IsOptional()
   @IsString()
   section?: string;

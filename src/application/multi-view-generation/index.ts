@@ -1,4 +1,4 @@
-// Updated: Barrel export for multi-view generation module
+//  Barrel export for multi-view generation module
 
 export * from './multi-view-generation.module';
 export * from './multi-view-generation.service';

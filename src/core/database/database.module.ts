@@ -1,4 +1,4 @@
-// Updated: Complete Database module implementation
+//  Complete Database module implementation
 
 import { Module, Global } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';

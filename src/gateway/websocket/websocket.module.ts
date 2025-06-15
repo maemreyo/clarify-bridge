@@ -1,8 +1,12 @@
-/**
- * WebSocket Module
- * 
- * Manages real-time WebSocket connections.
- * Handles events for collaboration and notifications.
- */
+//  WebSocket module for real-time communication
 
-// WebSocket module implementation will be added here
+import { Module } from '@nestjs/common';
+import { WebSocketGateway } from './websocket.gateway';
+
+@Module({
+  providers: [WebSocketGateway],
+  exports: [WebSocketGateway],
+})
+export class WebSocketModule {}
+
+// ============================================

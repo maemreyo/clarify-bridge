@@ -1,4 +1,4 @@
-// Updated: Barrel export for usage module
+//  Barrel export for usage module
 
 export * from './usage.module';
 export * from './usage.service';

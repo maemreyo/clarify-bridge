@@ -1,4 +1,4 @@
-// Updated: Specification interfaces and types
+//  Specification interfaces and types
 
 export interface SpecificationContext {
   rawInput: string;

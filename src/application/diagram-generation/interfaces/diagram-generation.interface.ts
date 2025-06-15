@@ -1,4 +1,4 @@
-// Updated: Diagram generation interfaces
+//  Diagram generation interfaces
 
 export type DiagramType =
   | 'flowchart'

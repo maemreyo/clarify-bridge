@@ -1,4 +1,4 @@
-// Updated: Notification module configuration
+//  Notification module configuration
 
 import { Module, Global } from '@nestjs/common';
 import { NotificationService } from './notification.service';
@@ -10,11 +10,7 @@ import { SlackProvider } from './providers/slack.provider';
  */
 @Global()
 @Module({
-  providers: [
-    NotificationService,
-    EmailProvider,
-    SlackProvider,
-  ],
+  providers: [NotificationService, EmailProvider, SlackProvider],
   exports: [NotificationService],
 })
 export class NotificationModule {}

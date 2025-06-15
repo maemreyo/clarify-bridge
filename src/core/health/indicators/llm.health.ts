@@ -1,4 +1,4 @@
-// Updated: LLM health indicator
+//  LLM health indicator
 
 import { Injectable } from '@nestjs/common';
 import { HealthIndicator, HealthIndicatorResult } from '@nestjs/terminus';

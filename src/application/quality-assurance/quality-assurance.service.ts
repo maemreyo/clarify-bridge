@@ -1,4 +1,4 @@
-// Updated: Main quality assurance service
+//  Main quality assurance service
 
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '@core/database';
@@ -96,26 +96,19 @@ export class QualityAssuranceService {
 
       // Track metrics
       const duration = Date.now() - startTime;
-      await this.monitoringService.trackAiGeneration(
-        'quality_check',
-        duration,
-        true,
-        {
-          overallScore: result.overallScore,
-          requiresReview: requiresHumanReview,
-        },
-      );
+      await this.monitoringService.trackAiGeneration('quality_check', duration, true, {
+        overallScore: result.overallScore,
+        requiresReview: requiresHumanReview,
+      });
 
-      this.logger.log(`Quality check completed for ${specificationId}: score ${result.overallScore}`);
+      this.logger.log(
+        `Quality check completed for ${specificationId}: score ${result.overallScore}`,
+      );
 
       return result;
     } catch (error) {
       const duration = Date.now() - startTime;
-      await this.monitoringService.trackAiGeneration(
-        'quality_check',
-        duration,
-        false,
-      );
+      await this.monitoringService.trackAiGeneration('quality_check', duration, false);
 
       this.logger.error('Quality check failed', error);
       throw error;
@@ -264,7 +257,7 @@ Provide your evaluation in JSON format:
       frontend: 0.25,
       backend: 0.25,
       crossView: 0.15,
-      aiSelf: 0.10,
+      aiSelf: 0.1,
     };
 
     return (
@@ -284,10 +277,7 @@ Provide your evaluation in JSON format:
     return (scores.pmCompleteness + scores.frontendCompleteness + scores.backendCompleteness) / 3;
   }
 
-  private shouldRequireHumanReview(
-    scores: QualityCheckResult,
-    issues: QualityIssue[],
-  ): boolean {
+  private shouldRequireHumanReview(scores: QualityCheckResult, issues: QualityIssue[]): boolean {
     // Require review if:
     // 1. Overall score is below threshold
     if (scores.overallScore < 0.7) return true;

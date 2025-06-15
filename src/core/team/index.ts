@@ -1,4 +1,4 @@
-// Updated: Barrel export for team module
+//  Barrel export for team module
 
 export * from './team.module';
 export * from './team.service';

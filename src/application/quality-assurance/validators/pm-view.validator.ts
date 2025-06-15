@@ -1,8 +1,12 @@
-// Updated: PM view quality validator
+//  PM view quality validator
 
 import { Injectable } from '@nestjs/common';
 import { GeneratedViews } from '@application/specification/interfaces/specification.interface';
-import { QualityIssue, IssueType, ViewQualityScore } from '../interfaces/quality-assurance.interface';
+import {
+  QualityIssue,
+  IssueType,
+  ViewQualityScore,
+} from '../interfaces/quality-assurance.interface';
 
 @Injectable()
 export class PmViewValidator {
@@ -105,12 +109,11 @@ export class PmViewValidator {
     }
 
     // Calculate overall score
-    const overall = (
+    const overall =
       scores.completeness * 0.4 +
       scores.clarity * 0.2 +
       scores.consistency * 0.2 +
-      scores.technicalAccuracy * 0.2
-    );
+      scores.technicalAccuracy * 0.2;
 
     return {
       score: {

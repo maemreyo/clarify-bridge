@@ -1,4 +1,4 @@
-// Updated: Collaboration API endpoints
+//  Collaboration API endpoints
 
 import {
   Controller,
@@ -13,13 +13,7 @@ import {
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
-import {
-  ApiTags,
-  ApiOperation,
-  ApiResponse,
-  ApiBearerAuth,
-  ApiParam,
-} from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam } from '@nestjs/swagger';
 import { CollaborationService } from './collaboration.service';
 import {
   CreateCommentDto,
@@ -85,10 +79,7 @@ export class CollaborationController {
   @ApiParam({ name: 'specificationId', description: 'Specification ID' })
   @ApiParam({ name: 'commentId', description: 'Comment ID' })
   @ApiResponse({ status: 204, description: 'Comment deleted' })
-  async deleteComment(
-    @Param('commentId') commentId: string,
-    @CurrentUser('id') userId: string,
-  ) {
+  async deleteComment(@Param('commentId') commentId: string, @CurrentUser('id') userId: string) {
     await this.collaborationService.deleteComment(commentId, userId);
   }
 

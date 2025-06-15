@@ -1,4 +1,4 @@
-// Updated: Complete authentication DTOs
+//  Complete authentication DTOs
 
 import { IsEmail, IsString, MinLength, MaxLength, IsOptional, Matches } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
@@ -21,12 +21,9 @@ export class RegisterUserDto {
   @IsString()
   @MinLength(8, { message: 'Password must be at least 8 characters long' })
   @MaxLength(50)
-  @Matches(
-    /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/,
-    {
-      message: 'Password must contain uppercase, lowercase, number and special character',
-    },
-  )
+  @Matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/, {
+    message: 'Password must contain uppercase, lowercase, number and special character',
+  })
   password: string;
 }
 
@@ -50,12 +47,9 @@ export class ResetPasswordDto {
   @IsString()
   @MinLength(8)
   @MaxLength(50)
-  @Matches(
-    /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/,
-    {
-      message: 'Password must contain uppercase, lowercase, number and special character',
-    },
-  )
+  @Matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/, {
+    message: 'Password must contain uppercase, lowercase, number and special character',
+  })
   newPassword: string;
 }
 

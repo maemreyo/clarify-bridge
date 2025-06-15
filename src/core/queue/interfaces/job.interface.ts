@@ -1,4 +1,4 @@
-// Updated: Job-related interfaces
+//  Job-related interfaces
 
 export interface BaseJobPayload {
   timestamp: Date;

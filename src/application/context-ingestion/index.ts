@@ -1,4 +1,4 @@
-// Updated: Barrel export for context ingestion module
+//  Barrel export for context ingestion module
 
 export * from './context-ingestion.module';
 export * from './context-ingestion.service';

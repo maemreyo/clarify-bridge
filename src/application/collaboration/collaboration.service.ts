@@ -1,4 +1,4 @@
-// Updated: Main collaboration service
+//  Main collaboration service
 
 import {
   Injectable,
@@ -125,9 +125,7 @@ export class CollaborationService {
 
     // Build comment threads if requested
     if (filter.includeReplies) {
-      const threads = await Promise.all(
-        comments.map(comment => this.buildCommentThread(comment)),
-      );
+      const threads = await Promise.all(comments.map(comment => this.buildCommentThread(comment)));
       return threads;
     }
 
@@ -137,11 +135,7 @@ export class CollaborationService {
   /**
    * Update comment
    */
-  async updateComment(
-    commentId: string,
-    userId: string,
-    dto: UpdateCommentDto,
-  ): Promise<Comment> {
+  async updateComment(commentId: string, userId: string, dto: UpdateCommentDto): Promise<Comment> {
     const comment = await this.prisma.comment.findUnique({
       where: { id: commentId },
       include: { specification: true },
@@ -289,11 +283,7 @@ export class CollaborationService {
   /**
    * Submit review decision
    */
-  async submitReview(
-    reviewId: string,
-    reviewerId: string,
-    dto: SubmitReviewDto,
-  ): Promise<Review> {
+  async submitReview(reviewId: string, reviewerId: string, dto: SubmitReviewDto): Promise<Review> {
     const review = await this.prisma.review.findUnique({
       where: { id: reviewId },
       include: {
@@ -376,10 +366,7 @@ export class CollaborationService {
   /**
    * Get reviews for specification
    */
-  async getReviews(
-    specificationId: string,
-    userId: string,
-  ): Promise<Review[]> {
+  async getReviews(specificationId: string, userId: string): Promise<Review[]> {
     // Verify access
     await this.getSpecificationWithAccess(specificationId, userId);
 
@@ -603,9 +590,7 @@ export class CollaborationService {
       orderBy: { createdAt: 'asc' },
     });
 
-    const threadReplies = await Promise.all(
-      replies.map(reply => this.buildCommentThread(reply)),
-    );
+    const threadReplies = await Promise.all(replies.map(reply => this.buildCommentThread(reply)));
 
     return {
       comment: {
@@ -665,10 +650,7 @@ export class CollaborationService {
       }),
     ]);
 
-    const dates = [
-      lastComment?.createdAt,
-      lastReview?.updatedAt,
-    ].filter(Boolean) as Date[];
+    const dates = [lastComment?.createdAt, lastReview?.updatedAt].filter(Boolean) as Date[];
 
     if (dates.length === 0) return undefined;
 

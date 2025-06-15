@@ -1,4 +1,4 @@
-// Updated: Diagram generation module configuration
+//  Diagram generation module configuration
 
 import { Module } from '@nestjs/common';
 import { DiagramGenerationService } from './diagram-generation.service';

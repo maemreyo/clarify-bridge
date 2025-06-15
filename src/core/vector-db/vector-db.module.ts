@@ -1,4 +1,4 @@
-// Updated: Vector database module configuration
+//  Vector database module configuration
 
 import { Module, Global } from '@nestjs/common';
 import { VectorDbService } from './vector-db.service';
@@ -10,11 +10,7 @@ import { MemoryVectorProvider } from './providers/memory.provider';
  */
 @Global()
 @Module({
-  providers: [
-    VectorDbService,
-    PineconeProvider,
-    MemoryVectorProvider,
-  ],
+  providers: [VectorDbService, PineconeProvider, MemoryVectorProvider],
   exports: [VectorDbService],
 })
 export class VectorDbModule {}

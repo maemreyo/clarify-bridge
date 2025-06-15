@@ -1,4 +1,4 @@
-// Updated: Barrel export for monitoring module
+//  Barrel export for monitoring module
 
 export * from './monitoring.module';
 export * from './monitoring.service';

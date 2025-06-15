@@ -1,4 +1,4 @@
-// Updated: Quality assurance interfaces
+//  Quality assurance interfaces
 
 import { GeneratedViews } from '@application/specification/interfaces/specification.interface';
 

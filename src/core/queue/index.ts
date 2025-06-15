@@ -1,4 +1,4 @@
-// Updated: Barrel export for queue module
+//  Barrel export for queue module
 
 export * from './job-queue.module';
 export * from './job-queue.service';

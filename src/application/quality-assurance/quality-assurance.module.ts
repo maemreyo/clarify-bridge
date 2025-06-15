@@ -1,4 +1,4 @@
-// Updated: Quality assurance module configuration
+//  Quality assurance module configuration
 
 import { Module } from '@nestjs/common';
 import { QualityAssuranceService } from './quality-assurance.service';

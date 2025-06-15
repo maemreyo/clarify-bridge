@@ -1,0 +1,62 @@
+//  Linear integration provider
+
+import { Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import {
+  IntegrationType,
+  IntegrationProvider,
+  IntegrationConfig,
+  LinearConfig,
+  SyncResult,
+  ExportResult,
+} from '../interfaces/integration.interface';
+
+@Injectable()
+export class LinearProvider implements IntegrationProvider {
+  readonly type = IntegrationType.LINEAR;
+  private readonly logger = new Logger(LinearProvider.name);
+
+  constructor(private configService: ConfigService) {}
+
+  async validateConfig(config: IntegrationConfig): Promise<boolean> {
+    const linearConfig = config as LinearConfig;
+
+    if (!linearConfig.apiKey || !linearConfig.teamId) {
+      return false;
+    }
+
+    return this.testConnection(config);
+  }
+
+  async testConnection(config: IntegrationConfig): Promise<boolean> {
+    // TODO: Implement Linear API connection test
+    return true;
+  }
+
+  async sync(integration: any): Promise<SyncResult> {
+    this.logger.log(`Syncing Linear integration ${integration.id}`);
+
+    return {
+      status: 'success',
+      message: 'Linear sync completed',
+      syncedItems: 0,
+    };
+  }
+
+  async exportSpecification(specification: any, config: IntegrationConfig): Promise<ExportResult> {
+    // TODO: Implement Linear issue creation
+    return {
+      externalId: 'LINEAR-123',
+      externalUrl: 'https://linear.app/team/issue/LINEAR-123',
+      provider: IntegrationType.LINEAR,
+      createdAt: new Date(),
+    };
+  }
+
+  async processWebhook(integration: any, event: string, payload: any): Promise<void> {
+    this.logger.log(`Processing Linear webhook: ${event}`);
+    // TODO: Handle Linear webhook events
+  }
+}
+
+// ============================================

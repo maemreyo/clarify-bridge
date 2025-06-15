@@ -1,4 +1,4 @@
-// Updated: Sequence diagram generator
+//  Sequence diagram generator
 
 import { Injectable } from '@nestjs/common';
 
@@ -45,12 +45,14 @@ export class SequenceGenerator {
     return mermaid;
   }
 
-  generateFromEndpoints(endpoints: Array<{
-    method: string;
-    path: string;
-    description: string;
-    authentication: boolean;
-  }>): string {
+  generateFromEndpoints(
+    endpoints: Array<{
+      method: string;
+      path: string;
+      description: string;
+      authentication: boolean;
+    }>,
+  ): string {
     const participants: SequenceParticipant[] = [
       { id: 'User', name: 'User', type: 'actor' },
       { id: 'Frontend', name: 'Frontend App', type: 'participant' },

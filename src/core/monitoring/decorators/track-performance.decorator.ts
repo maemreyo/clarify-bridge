@@ -1,4 +1,4 @@
-// Updated: Performance tracking decorator
+//  Performance tracking decorator
 
 import { Inject } from '@nestjs/common';
 import { MonitoringService } from '../monitoring.service';
@@ -6,11 +6,7 @@ import { MonitoringService } from '../monitoring.service';
 export function TrackPerformance(operation?: string) {
   const injectMonitoring = Inject(MonitoringService);
 
-  return function (
-    target: any,
-    propertyKey: string,
-    descriptor: PropertyDescriptor,
-  ) {
+  return function (target: any, propertyKey: string, descriptor: PropertyDescriptor) {
     injectMonitoring(target, 'monitoringService');
 
     const originalMethod = descriptor.value;
@@ -19,9 +15,8 @@ export function TrackPerformance(operation?: string) {
       const monitoringService = this.monitoringService as MonitoringService;
       const operationName = operation || `${target.constructor.name}.${propertyKey}`;
 
-      return monitoringService.trackPerformance(
-        operationName,
-        () => originalMethod.apply(this, args),
+      return monitoringService.trackPerformance(operationName, () =>
+        originalMethod.apply(this, args),
       );
     };
 

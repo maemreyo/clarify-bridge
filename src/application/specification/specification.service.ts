@@ -1,4 +1,4 @@
-// Updated: Core specification management service
+//  Core specification management service
 
 import {
   Injectable,
@@ -13,12 +13,7 @@ import { NotificationService } from '@core/notification';
 import { VectorDbService } from '@core/vector-db';
 import { UsageService } from '@core/usage';
 import { MonitoringService } from '@core/monitoring';
-import {
-  SpecificationStatus,
-  Priority,
-  Prisma,
-  NotificationType,
-} from '@prisma/client';
+import { SpecificationStatus, Priority, Prisma, NotificationType } from '@prisma/client';
 import {
   CreateSpecificationDto,
   UpdateSpecificationDto,
@@ -44,10 +39,7 @@ export class SpecificationService {
   /**
    * Create a new specification
    */
-  async createSpecification(
-    userId: string,
-    dto: CreateSpecificationDto,
-  ) {
+  async createSpecification(userId: string, dto: CreateSpecificationDto) {
     // Track activity
     await this.monitoringService.trackUserActivity(userId, 'specification.create', {
       title: dto.title,
@@ -63,9 +55,11 @@ export class SpecificationService {
         status: SpecificationStatus.DRAFT,
         authorId: userId,
         teamId: dto.teamId,
-        externalLinks: dto.context?.references ? {
-          references: dto.context.references,
-        } : undefined,
+        externalLinks: dto.context?.references
+          ? {
+              references: dto.context.references,
+            }
+          : undefined,
       },
       include: {
         author: {
@@ -112,8 +106,7 @@ export class SpecificationService {
         teamId: dto.teamId,
       },
       {
-        priority: dto.priority === Priority.URGENT ? 1 :
-                 dto.priority === Priority.HIGH ? 2 : 3,
+        priority: dto.priority === Priority.URGENT ? 1 : dto.priority === Priority.HIGH ? 2 : 3,
       },
     );
 
@@ -169,7 +162,7 @@ export class SpecificationService {
     }
 
     // Check access permission
-    if (!await this.canAccessSpecification(specification, userId)) {
+    if (!(await this.canAccessSpecification(specification, userId))) {
       throw new ForbiddenException('You do not have access to this specification');
     }
 
@@ -184,10 +177,7 @@ export class SpecificationService {
   /**
    * Get user's specifications
    */
-  async getUserSpecifications(
-    userId: string,
-    filter: SpecificationFilterDto,
-  ) {
+  async getUserSpecifications(userId: string, filter: SpecificationFilterDto) {
     const where: Prisma.SpecificationWhereInput = {
       OR: [
         { authorId: userId },
@@ -268,11 +258,7 @@ export class SpecificationService {
   /**
    * Update specification
    */
-  async updateSpecification(
-    specificationId: string,
-    userId: string,
-    dto: UpdateSpecificationDto,
-  ) {
+  async updateSpecification(specificationId: string, userId: string, dto: UpdateSpecificationDto) {
     const specification = await this.prisma.specification.findUnique({
       where: { id: specificationId },
     });
@@ -281,7 +267,7 @@ export class SpecificationService {
       throw new NotFoundException('Specification not found');
     }
 
-    if (!await this.canEditSpecification(specification, userId)) {
+    if (!(await this.canEditSpecification(specification, userId))) {
       throw new ForbiddenException('You do not have permission to edit this specification');
     }
 
@@ -349,7 +335,7 @@ export class SpecificationService {
       throw new NotFoundException('Specification not found');
     }
 
-    if (!await this.canEditSpecification(specification, userId)) {
+    if (!(await this.canEditSpecification(specification, userId))) {
       throw new ForbiddenException('You do not have permission to edit this specification');
     }
 
@@ -393,11 +379,7 @@ export class SpecificationService {
   /**
    * Regenerate specific views
    */
-  async regenerateViews(
-    specificationId: string,
-    userId: string,
-    dto: RegenerateViewDto,
-  ) {
+  async regenerateViews(specificationId: string, userId: string, dto: RegenerateViewDto) {
     const specification = await this.prisma.specification.findUnique({
       where: { id: specificationId },
     });
@@ -406,27 +388,24 @@ export class SpecificationService {
       throw new NotFoundException('Specification not found');
     }
 
-    if (!await this.canEditSpecification(specification, userId)) {
+    if (!(await this.canEditSpecification(specification, userId))) {
       throw new ForbiddenException('You do not have permission to regenerate views');
     }
 
     // Queue regeneration job
-    const job = await this.jobQueue.addJob(
-      QueueName.SPECIFICATION,
-      {
-        type: JobType.UPDATE_SPECIFICATION,
-        payload: {
-          specificationId,
-          updates: {
-            view: dto.view,
-            additionalContext: dto.additionalContext,
-            improvements: dto.improvements,
-          },
+    const job = await this.jobQueue.addJob(QueueName.SPECIFICATION, {
+      type: JobType.UPDATE_SPECIFICATION,
+      payload: {
+        specificationId,
+        updates: {
+          view: dto.view,
+          additionalContext: dto.additionalContext,
+          improvements: dto.improvements,
         },
-        userId,
-        teamId: specification.teamId,
       },
-    );
+      userId,
+      teamId: specification.teamId,
+    });
 
     return {
       specificationId,
@@ -466,10 +445,7 @@ export class SpecificationService {
   /**
    * Get specification versions
    */
-  async getSpecificationVersions(
-    specificationId: string,
-    userId: string,
-  ) {
+  async getSpecificationVersions(specificationId: string, userId: string) {
     const specification = await this.prisma.specification.findUnique({
       where: { id: specificationId },
     });
@@ -478,7 +454,7 @@ export class SpecificationService {
       throw new NotFoundException('Specification not found');
     }
 
-    if (!await this.canAccessSpecification(specification, userId)) {
+    if (!(await this.canAccessSpecification(specification, userId))) {
       throw new ForbiddenException('You do not have access to this specification');
     }
 
@@ -525,10 +501,7 @@ export class SpecificationService {
   /**
    * Get related specifications
    */
-  async getRelatedSpecifications(
-    specificationId: string,
-    userId: string,
-  ) {
+  async getRelatedSpecifications(specificationId: string, userId: string) {
     const specification = await this.prisma.specification.findUnique({
       where: { id: specificationId },
     });
@@ -537,17 +510,14 @@ export class SpecificationService {
       throw new NotFoundException('Specification not found');
     }
 
-    if (!await this.canAccessSpecification(specification, userId)) {
+    if (!(await this.canAccessSpecification(specification, userId))) {
       throw new ForbiddenException('You do not have access to this specification');
     }
 
-    const related = await this.vectorDbService.getRelatedSpecifications(
-      specificationId,
-      {
-        teamId: specification.teamId || undefined,
-        limit: 5,
-      },
-    );
+    const related = await this.vectorDbService.getRelatedSpecifications(specificationId, {
+      teamId: specification.teamId || undefined,
+      limit: 5,
+    });
 
     // Get specification details
     const specIds = related.map(r => r.id);
@@ -583,10 +553,7 @@ export class SpecificationService {
 
   // Private helper methods
 
-  private async canAccessSpecification(
-    specification: any,
-    userId: string,
-  ): Promise<boolean> {
+  private async canAccessSpecification(specification: any, userId: string): Promise<boolean> {
     // Author always has access
     if (specification.authorId === userId) {
       return true;
@@ -608,10 +575,7 @@ export class SpecificationService {
     return false;
   }
 
-  private async canEditSpecification(
-    specification: any,
-    userId: string,
-  ): Promise<boolean> {
+  private async canEditSpecification(specification: any, userId: string): Promise<boolean> {
     // Author can always edit
     if (specification.authorId === userId) {
       return true;
@@ -647,18 +611,20 @@ export class SpecificationService {
       qualityScore: specification.qualityScore,
       lastReviewedAt: specification.lastReviewedAt,
       externalLinks: specification.externalLinks,
-      latestVersion: latestVersion ? {
-        id: latestVersion.id,
-        version: latestVersion.version,
-        pmView: latestVersion.pmView,
-        frontendView: latestVersion.frontendView,
-        backendView: latestVersion.backendView,
-        diagramSyntax: latestVersion.diagramSyntax,
-        aiConfidenceScore: latestVersion.aiConfidenceScore,
-        validationResults: latestVersion.validationResults,
-        changesSummary: latestVersion.changesSummary,
-        createdAt: latestVersion.createdAt,
-      } : undefined,
+      latestVersion: latestVersion
+        ? {
+            id: latestVersion.id,
+            version: latestVersion.version,
+            pmView: latestVersion.pmView,
+            frontendView: latestVersion.frontendView,
+            backendView: latestVersion.backendView,
+            diagramSyntax: latestVersion.diagramSyntax,
+            aiConfidenceScore: latestVersion.aiConfidenceScore,
+            validationResults: latestVersion.validationResults,
+            changesSummary: latestVersion.changesSummary,
+            createdAt: latestVersion.createdAt,
+          }
+        : undefined,
       versionsCount: specification._count?.versions || 0,
       commentsCount: specification._count?.comments || 0,
       createdAt: specification.createdAt,
@@ -686,10 +652,7 @@ export class SpecificationService {
   /**
    * Internal method for updating specification
    */
-  async updateSpecificationInternal(
-    specificationId: string,
-    updates: any,
-  ): Promise<any> {
+  async updateSpecificationInternal(specificationId: string, updates: any): Promise<any> {
     // This will be implemented when we create the other Application modules
     this.logger.log(`Updating specification ${specificationId}`);
 

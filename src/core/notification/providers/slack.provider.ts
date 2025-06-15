@@ -1,4 +1,4 @@
-// Updated: Slack notification provider (placeholder)
+//  Slack notification provider (placeholder)
 
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';

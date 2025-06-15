@@ -1,4 +1,4 @@
-// Updated: Team module configuration
+//  Team module configuration
 
 import { Module } from '@nestjs/common';
 import { TeamService } from './team.service';

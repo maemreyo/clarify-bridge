@@ -1,6 +1,15 @@
-// Updated: Team DTOs implementation
+//  Team DTOs implementation
 
-import { IsString, IsOptional, MinLength, MaxLength, IsEnum, IsUUID, IsUrl, IsObject } from 'class-validator';
+import {
+  IsString,
+  IsOptional,
+  MinLength,
+  MaxLength,
+  IsEnum,
+  IsUUID,
+  IsUrl,
+  IsObject,
+} from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
 import { TeamRole } from '@prisma/client';

@@ -1,4 +1,4 @@
-// Updated: Notification provider interface
+//  Notification provider interface
 
 export interface NotificationOptions {
   priority?: 'low' | 'normal' | 'high';

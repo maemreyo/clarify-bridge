@@ -1,4 +1,4 @@
-// Updated: Image processing utilities
+//  Image processing utilities
 
 import { Injectable, Logger } from '@nestjs/common';
 import { LlmCoreService } from '@core/llm';
@@ -14,10 +14,7 @@ export class ImageProcessor {
    * Process image to extract UI/UX information
    * Note: This is a placeholder - real implementation would use OCR and image analysis
    */
-  async processImage(
-    imageData: Buffer | string,
-    mimeType: string,
-  ): Promise<ImageAnalysisResult> {
+  async processImage(imageData: Buffer | string, mimeType: string): Promise<ImageAnalysisResult> {
     this.logger.log(`Processing image of type: ${mimeType}`);
 
     // In a real implementation, this would:

@@ -1,4 +1,4 @@
-// Updated: Health check controller with comprehensive system checks
+//  Health check controller with comprehensive system checks
 
 import { Controller, Get } from '@nestjs/common';
 import {
@@ -94,10 +94,11 @@ export class HealthController {
       // System resources
       () => this.memory.checkHeap('memory_heap', 200 * 1024 * 1024),
       () => this.memory.checkRSS('memory_rss', 300 * 1024 * 1024),
-      () => this.disk.checkStorage('disk_storage', {
-        path: process.platform === 'win32' ? 'C:\\' : '/',
-        thresholdPercent: 0.9, // 90% threshold
-      }),
+      () =>
+        this.disk.checkStorage('disk_storage', {
+          path: process.platform === 'win32' ? 'C:\\' : '/',
+          thresholdPercent: 0.9, // 90% threshold
+        }),
 
       // External dependencies (if needed)
       () => this.http.pingCheck('google', 'https://google.com'),

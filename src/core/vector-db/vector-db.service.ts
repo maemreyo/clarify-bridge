@@ -1,4 +1,4 @@
-// Updated: Main vector database service
+//  Main vector database service
 
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';

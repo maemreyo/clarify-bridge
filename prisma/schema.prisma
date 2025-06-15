@@ -1,6 +1,3 @@
-// prisma/schema.prisma
-// Updated: Complete schema implementation for The Clarity Bridge
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -55,6 +52,7 @@ model Team {
 
   members       TeamMember[]
   specifications Specification[]
+  integrations  Integration[]
 
   // Team settings
   settings      Json?            // Approval workflows, integrations config
@@ -204,6 +202,43 @@ enum ReviewStatus {
   REJECTED
 }
 
+// ==================== INTEGRATIONS ====================
+
+model Integration {
+  id              String             @id @default(cuid())
+  type            String             // JIRA, LINEAR, NOTION, GITHUB, SLACK
+  teamId          String
+  team            Team               @relation(fields: [teamId], references: [id])
+
+  config          Json               // Provider-specific configuration
+  isActive        Boolean            @default(true)
+  lastSyncAt      DateTime?
+
+  createdByUserId String
+  webhookEvents   WebhookEvent[]
+
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  @@index([teamId, type])
+}
+
+model WebhookEvent {
+  id            String    @id @default(cuid())
+  integrationId String
+  integration   Integration @relation(fields: [integrationId], references: [id])
+
+  event         String
+  payload       Json
+  status        String    @default("pending") // pending, processed, failed
+  error         String?
+
+  processedAt   DateTime?
+  createdAt     DateTime  @default(now())
+
+  @@index([integrationId, status])
+}
+
 // ==================== SUBSCRIPTIONS & BILLING ====================
 
 model Subscription {
@@ -290,31 +325,55 @@ model UsageLog {
 
   @@index([userId, createdAt])
   @@index([teamId, createdAt])
-  @@index([action, createdAt])
 }
 
 // ==================== NOTIFICATIONS ====================
 
 model Notification {
-  id          String            @id @default(cuid())
-  userId      String
-  type        NotificationType
-  title       String
-  content     String?
-  metadata    Json?
-  read        Boolean           @default(false)
+  id         String             @id @default(cuid())
+  type       NotificationType
+  recipientId String
 
-  createdAt   DateTime          @default(now())
+  title      String
+  message    String
+  data       Json?              // Additional context
 
-  @@index([userId, read, createdAt])
+  isRead     Boolean            @default(false)
+  readAt     DateTime?
+
+  createdAt  DateTime           @default(now())
+
+  @@index([recipientId, isRead])
+  @@index([type, createdAt])
 }
 
 enum NotificationType {
-  SPEC_COMPLETED
+  // Specification events
+  SPEC_CREATED
+  SPEC_UPDATED
+  SPEC_APPROVED
+  SPEC_REJECTED
+
+  // Collaboration events
   COMMENT_ADDED
+  COMMENT_REPLY
   REVIEW_REQUESTED
   REVIEW_COMPLETED
+
+  // Team events
   TEAM_INVITATION
-  SUBSCRIPTION_UPDATE
-  SYSTEM_ALERT
+  MEMBER_JOINED
+  MEMBER_LEFT
+
+  // Integration events
+  INTEGRATION_CREATED
+  INTEGRATION_ERROR
+  INTEGRATION_REMOVED
+
+  // System events
+  USAGE_LIMIT_WARNING
+  SUBSCRIPTION_EXPIRING
+  SYSTEM_UPDATE
 }
+
+// ============================================

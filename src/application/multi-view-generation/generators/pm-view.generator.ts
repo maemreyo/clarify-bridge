@@ -1,8 +1,11 @@
-// Updated: PM view generator implementation
+//  PM view generator implementation
 
 import { Injectable, Logger } from '@nestjs/common';
 import { LlmCoreService, PromptTemplate } from '@core/llm';
-import { ViewGenerationContext, ViewGeneratorOptions } from '../interfaces/view-generation.interface';
+import {
+  ViewGenerationContext,
+  ViewGeneratorOptions,
+} from '../interfaces/view-generation.interface';
 import { GeneratedViews } from '@application/specification/interfaces/specification.interface';
 
 @Injectable()
@@ -78,10 +81,14 @@ ${context.processed.userStories ? `Identified User Stories:\n${context.processed
 
 ${context.processed.businessRules ? `Business Rules:\n${context.processed.businessRules.join('\n')}` : ''}
 
-${context.enhancement?.relatedSpecifications.length ? `
+${
+  context.enhancement?.relatedSpecifications.length
+    ? `
 Related Specifications:
 ${context.enhancement.relatedSpecifications.map(s => `- ${s.title} (${Math.round(s.relevance * 100)}% relevant)`).join('\n')}
-` : ''}
+`
+    : ''
+}
 
 === OUTPUT FORMAT ===
 Generate a PM specification in the following JSON format:
@@ -171,8 +178,9 @@ Focus on the primary user journey.`,
       });
 
       // Extract mermaid code
-      const mermaidMatch = result.content.match(/```mermaid\n([\s\S]*?)\n```/) ||
-                          result.content.match(/graph\s+\w+\n[\s\S]*/);
+      const mermaidMatch =
+        result.content.match(/```mermaid\n([\s\S]*?)\n```/) ||
+        result.content.match(/graph\s+\w+\n[\s\S]*/);
 
       return mermaidMatch ? mermaidMatch[1] || mermaidMatch[0] : '';
     } catch (error) {

@@ -1,4 +1,4 @@
-// Updated: Specification REST API endpoints
+//  Specification REST API endpoints
 
 import {
   Controller,
@@ -14,13 +14,7 @@ import {
   HttpStatus,
   Req,
 } from '@nestjs/common';
-import {
-  ApiTags,
-  ApiOperation,
-  ApiResponse,
-  ApiBearerAuth,
-  ApiParam,
-} from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam } from '@nestjs/swagger';
 import { SpecificationService } from './specification.service';
 import {
   CreateSpecificationDto,
@@ -66,7 +60,11 @@ export class SpecificationController {
 
   @Get()
   @ApiOperation({ summary: 'Get user specifications' })
-  @ApiResponse({ status: 200, description: 'Specifications retrieved', type: SpecificationListResponseDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Specifications retrieved',
+    type: SpecificationListResponseDto,
+  })
   async getUserSpecifications(
     @CurrentUser('id') userId: string,
     @Query() filter: SpecificationFilterDto,
@@ -77,7 +75,11 @@ export class SpecificationController {
   @Get(':id')
   @ApiOperation({ summary: 'Get specification by ID' })
   @ApiParam({ name: 'id', description: 'Specification ID' })
-  @ApiResponse({ status: 200, description: 'Specification retrieved', type: SpecificationResponseDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Specification retrieved',
+    type: SpecificationResponseDto,
+  })
   async getSpecification(
     @Param('id') id: string,
     @CurrentUser('id') userId: string,
@@ -88,7 +90,11 @@ export class SpecificationController {
   @Put(':id')
   @ApiOperation({ summary: 'Update specification' })
   @ApiParam({ name: 'id', description: 'Specification ID' })
-  @ApiResponse({ status: 200, description: 'Specification updated', type: SpecificationResponseDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Specification updated',
+    type: SpecificationResponseDto,
+  })
   async updateSpecification(
     @Param('id') id: string,
     @CurrentUser('id') userId: string,
@@ -135,10 +141,7 @@ export class SpecificationController {
   @ApiOperation({ summary: 'Delete specification' })
   @ApiParam({ name: 'id', description: 'Specification ID' })
   @ApiResponse({ status: 204, description: 'Specification deleted' })
-  async deleteSpecification(
-    @Param('id') id: string,
-    @CurrentUser('id') userId: string,
-  ) {
+  async deleteSpecification(@Param('id') id: string, @CurrentUser('id') userId: string) {
     await this.specificationService.deleteSpecification(id, userId);
   }
 
@@ -146,10 +149,7 @@ export class SpecificationController {
   @ApiOperation({ summary: 'Get specification versions' })
   @ApiParam({ name: 'id', description: 'Specification ID' })
   @ApiResponse({ status: 200, description: 'Versions retrieved' })
-  async getVersions(
-    @Param('id') id: string,
-    @CurrentUser('id') userId: string,
-  ) {
+  async getVersions(@Param('id') id: string, @CurrentUser('id') userId: string) {
     return this.specificationService.getSpecificationVersions(id, userId);
   }
 
@@ -169,10 +169,7 @@ export class SpecificationController {
   @ApiOperation({ summary: 'Get related specifications' })
   @ApiParam({ name: 'id', description: 'Specification ID' })
   @ApiResponse({ status: 200, description: 'Related specifications retrieved' })
-  async getRelated(
-    @Param('id') id: string,
-    @CurrentUser('id') userId: string,
-  ) {
+  async getRelated(@Param('id') id: string, @CurrentUser('id') userId: string) {
     return this.specificationService.getRelatedSpecifications(id, userId);
   }
 }

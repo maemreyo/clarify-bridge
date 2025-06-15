@@ -1,4 +1,4 @@
-// Updated: LLM Provider interface definition
+//  LLM Provider interface definition
 
 export interface LLMGenerationOptions {
   temperature?: number;
@@ -30,10 +30,7 @@ export interface LLMProvider {
   readonly name: string;
   readonly priority: number;
 
-  generateText(
-    prompt: string,
-    options?: LLMGenerationOptions,
-  ): Promise<LLMGenerationResult>;
+  generateText(prompt: string, options?: LLMGenerationOptions): Promise<LLMGenerationResult>;
 
   generateChat(
     messages: LLMMessage[],
@@ -54,15 +51,9 @@ export interface LLMEmbeddingResult {
 }
 
 export interface LLMEmbeddingProvider {
-  generateEmbedding(
-    text: string,
-    options?: LLMEmbeddingOptions,
-  ): Promise<LLMEmbeddingResult>;
+  generateEmbedding(text: string, options?: LLMEmbeddingOptions): Promise<LLMEmbeddingResult>;
 
-  generateEmbeddings(
-    texts: string[],
-    options?: LLMEmbeddingOptions,
-  ): Promise<LLMEmbeddingResult[]>;
+  generateEmbeddings(texts: string[], options?: LLMEmbeddingOptions): Promise<LLMEmbeddingResult[]>;
 }
 
 // ============================================

@@ -1,4 +1,4 @@
-// Updated: Collaboration module configuration
+//  Collaboration module configuration
 
 import { Module } from '@nestjs/common';
 import { CollaborationService } from './collaboration.service';

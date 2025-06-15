@@ -4,7 +4,17 @@
   "sourceRoot": "src",
   "compilerOptions": {
     "deleteOutDir": true,
-    "webpack": false,
-    "tsConfigPath": "tsconfig.json"
+    "webpack": true
+  },
+  "projects": {
+    "the-clarity-bridge": {
+      "type": "application",
+      "root": "",
+      "entryFile": "main",
+      "sourceRoot": "src",
+      "compilerOptions": {
+        "tsConfigPath": "tsconfig.json"
+      }
+    }
   }
 }

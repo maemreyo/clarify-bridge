@@ -1,4 +1,4 @@
-// Updated: OpenAI LLM Provider implementation
+//  OpenAI LLM Provider implementation
 
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -57,30 +57,26 @@ export class OpenAIProvider implements LLMProvider, LLMEmbeddingProvider {
     }
   }
 
-  async generateText(
-    prompt: string,
-    options?: LLMGenerationOptions,
-  ): Promise<LLMGenerationResult> {
+  async generateText(prompt: string, options?: LLMGenerationOptions): Promise<LLMGenerationResult> {
     try {
-      const response = await this.chatModel.invoke(
-        [new HumanMessage(prompt)],
-        {
-          temperature: options?.temperature,
-          maxTokens: options?.maxTokens,
-          topP: options?.topP,
-          frequencyPenalty: options?.frequencyPenalty,
-          presencePenalty: options?.presencePenalty,
-          stop: options?.stopSequences,
-        },
-      );
+      const response = await this.chatModel.invoke([new HumanMessage(prompt)], {
+        temperature: options?.temperature,
+        maxTokens: options?.maxTokens,
+        topP: options?.topP,
+        frequencyPenalty: options?.frequencyPenalty,
+        presencePenalty: options?.presencePenalty,
+        stop: options?.stopSequences,
+      });
 
       return {
         content: response.content.toString(),
-        usage: response.usage_metadata ? {
-          promptTokens: response.usage_metadata.input_tokens || 0,
-          completionTokens: response.usage_metadata.output_tokens || 0,
-          totalTokens: response.usage_metadata.total_tokens || 0,
-        } : undefined,
+        usage: response.usage_metadata
+          ? {
+              promptTokens: response.usage_metadata.input_tokens || 0,
+              completionTokens: response.usage_metadata.output_tokens || 0,
+              totalTokens: response.usage_metadata.total_tokens || 0,
+            }
+          : undefined,
         model: options?.model || 'gpt-4-turbo-preview',
         provider: this.name,
       };
@@ -95,7 +91,7 @@ export class OpenAIProvider implements LLMProvider, LLMEmbeddingProvider {
     options?: LLMGenerationOptions,
   ): Promise<LLMGenerationResult> {
     try {
-      const langchainMessages = messages.map((msg) => {
+      const langchainMessages = messages.map(msg => {
         switch (msg.role) {
           case 'system':
             return new SystemMessage(msg.content);
@@ -117,11 +113,13 @@ export class OpenAIProvider implements LLMProvider, LLMEmbeddingProvider {
 
       return {
         content: response.content.toString(),
-        usage: response.usage_metadata ? {
-          promptTokens: response.usage_metadata.input_tokens || 0,
-          completionTokens: response.usage_metadata.output_tokens || 0,
-          totalTokens: response.usage_metadata.total_tokens || 0,
-        } : undefined,
+        usage: response.usage_metadata
+          ? {
+              promptTokens: response.usage_metadata.input_tokens || 0,
+              completionTokens: response.usage_metadata.output_tokens || 0,
+              totalTokens: response.usage_metadata.total_tokens || 0,
+            }
+          : undefined,
         model: options?.model || 'gpt-4-turbo-preview',
         provider: this.name,
       };
@@ -156,7 +154,7 @@ export class OpenAIProvider implements LLMProvider, LLMEmbeddingProvider {
     try {
       const embeddings = await this.embeddingModel.embedDocuments(texts);
 
-      return embeddings.map((embedding) => ({
+      return embeddings.map(embedding => ({
         embedding,
         model: options?.model || 'text-embedding-ada-002',
         provider: this.name,

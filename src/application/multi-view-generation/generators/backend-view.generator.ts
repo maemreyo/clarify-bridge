@@ -1,8 +1,11 @@
-// Updated: Backend view generator implementation
+//  Backend view generator implementation
 
 import { Injectable, Logger } from '@nestjs/common';
 import { LlmCoreService, PromptTemplate } from '@core/llm';
-import { ViewGenerationContext, ViewGeneratorOptions } from '../interfaces/view-generation.interface';
+import {
+  ViewGenerationContext,
+  ViewGeneratorOptions,
+} from '../interfaces/view-generation.interface';
 import { GeneratedViews } from '@application/specification/interfaces/specification.interface';
 
 @Injectable()
@@ -66,15 +69,23 @@ ${context.processed.keyRequirements.map(r => `- ${r}`).join('\n')}
 Technical Details:
 ${JSON.stringify(context.processed.technicalDetails, null, 2)}
 
-${context.processed.businessRules ? `
+${
+  context.processed.businessRules
+    ? `
 Business Rules:
 ${context.processed.businessRules.join('\n')}
-` : ''}
+`
+    : ''
+}
 
-${context.enhancement?.commonPatterns.length ? `
+${
+  context.enhancement?.commonPatterns.length
+    ? `
 Common Patterns Identified:
 ${context.enhancement.commonPatterns.join(', ')}
-` : ''}
+`
+    : ''
+}
 
 === OUTPUT FORMAT ===
 Generate a Backend specification in the following JSON format:
@@ -165,7 +176,8 @@ Generate a Backend specification in the following JSON format:
   private validateEndpoints(endpoints: any[]): GeneratedViews['backendView']['endpoints'] {
     return endpoints.map(endpoint => ({
       method: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'].includes(endpoint.method)
-        ? endpoint.method : 'GET',
+        ? endpoint.method
+        : 'GET',
       path: endpoint.path || '/api/resource',
       description: endpoint.description || '',
       requestBody: endpoint.requestBody,
@@ -178,12 +190,14 @@ Generate a Backend specification in the following JSON format:
     return models.map(model => ({
       name: model.name || 'Model',
       description: model.description || '',
-      fields: Array.isArray(model.fields) ? model.fields.map(field => ({
-        name: field.name || 'field',
-        type: field.type || 'string',
-        required: field.required !== false,
-        description: field.description,
-      })) : [],
+      fields: Array.isArray(model.fields)
+        ? model.fields.map(field => ({
+            name: field.name || 'field',
+            type: field.type || 'string',
+            required: field.required !== false,
+            description: field.description,
+          }))
+        : [],
       relationships: Array.isArray(model.relationships) ? model.relationships : [],
     }));
   }

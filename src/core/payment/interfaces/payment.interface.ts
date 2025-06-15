@@ -1,4 +1,4 @@
-// Updated: Payment interfaces and types
+//  Payment interfaces and types
 
 import { SubscriptionTier, SubscriptionStatus } from '@prisma/client';
 

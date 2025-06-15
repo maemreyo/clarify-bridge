@@ -1,4 +1,4 @@
-// Updated: Flowchart diagram generator
+//  Flowchart diagram generator
 
 import { Injectable } from '@nestjs/common';
 import { DiagramOptions } from '../interfaces/diagram-generation.interface';
@@ -48,15 +48,15 @@ export class FlowchartGenerator {
     return mermaid;
   }
 
-  generateFromUserStories(userStories: Array<{
-    id: string;
-    title: string;
-    description: string;
-    acceptanceCriteria: string[];
-  }>): string {
-    const nodes: FlowchartNode[] = [
-      { id: 'start', label: 'User Journey Start', type: 'start' },
-    ];
+  generateFromUserStories(
+    userStories: Array<{
+      id: string;
+      title: string;
+      description: string;
+      acceptanceCriteria: string[];
+    }>,
+  ): string {
+    const nodes: FlowchartNode[] = [{ id: 'start', label: 'User Journey Start', type: 'start' }];
 
     const edges: FlowchartEdge[] = [];
     let previousId = 'start';

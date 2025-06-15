@@ -1,4 +1,4 @@
-// Updated: Complete Prisma service implementation
+//  Complete Prisma service implementation
 
 import { Injectable, OnModuleInit, OnModuleDestroy, Logger } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
@@ -66,15 +66,15 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
     }
 
     const models = Reflect.ownKeys(this).filter(
-      (key) => key[0] !== '_' && key[0] !== '$' && typeof key === 'string'
+      key => key[0] !== '_' && key[0] !== '$' && typeof key === 'string',
     ) as string[];
 
     return Promise.all(
-      models.map((model) => {
+      models.map(model => {
         if (this[model]?.deleteMany) {
           return this[model].deleteMany();
         }
-      })
+      }),
     );
   }
 

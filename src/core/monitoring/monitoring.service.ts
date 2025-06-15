@@ -1,4 +1,4 @@
-// Updated: Monitoring service for metrics and analytics
+//  Monitoring service for metrics and analytics
 
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -38,11 +38,7 @@ export class MonitoringService {
   /**
    * Track a counter metric
    */
-  incrementCounter(
-    name: string,
-    value: number = 1,
-    tags?: Record<string, string>,
-  ): void {
+  incrementCounter(name: string, value: number = 1, tags?: Record<string, string>): void {
     this.recordMetric({
       name,
       value,
@@ -54,11 +50,7 @@ export class MonitoringService {
   /**
    * Track a gauge metric
    */
-  setGauge(
-    name: string,
-    value: number,
-    tags?: Record<string, string>,
-  ): void {
+  setGauge(name: string, value: number, tags?: Record<string, string>): void {
     this.recordMetric({
       name,
       value,
@@ -238,10 +230,7 @@ export class MonitoringService {
   /**
    * Get metrics summary
    */
-  async getMetricsSummary(
-    startDate?: Date,
-    endDate?: Date,
-  ): Promise<Record<string, any>> {
+  async getMetricsSummary(startDate?: Date, endDate?: Date): Promise<Record<string, any>> {
     const dateFilter = {
       createdAt: {
         gte: startDate || new Date(Date.now() - 24 * 60 * 60 * 1000), // Default to last 24 hours
@@ -249,12 +238,7 @@ export class MonitoringService {
       },
     };
 
-    const [
-      totalEvents,
-      eventsByType,
-      userActivity,
-      teamActivity,
-    ] = await Promise.all([
+    const [totalEvents, eventsByType, userActivity, teamActivity] = await Promise.all([
       this.prisma.analyticsEvent.count({ where: dateFilter }),
       this.prisma.analyticsEvent.groupBy({
         by: ['eventType'],

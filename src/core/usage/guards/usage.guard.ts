@@ -1,4 +1,4 @@
-// Updated: Usage limit guard
+//  Usage limit guard
 
 import { Injectable, CanActivate, ExecutionContext, ForbiddenException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
@@ -6,8 +6,8 @@ import { UsageService } from '../usage.service';
 import { UsageAction } from '../interfaces/usage.interface';
 
 export const USAGE_ACTION_KEY = 'usageAction';
-export const CheckUsage = (action: UsageAction) =>
-  (target: any, key?: string | symbol, descriptor?: any) => {
+export const CheckUsage =
+  (action: UsageAction) => (target: any, key?: string | symbol, descriptor?: any) => {
     if (descriptor) {
       Reflect.defineMetadata(USAGE_ACTION_KEY, action, descriptor.value);
       return descriptor;
@@ -24,10 +24,7 @@ export class UsageGuard implements CanActivate {
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const action = this.reflector.get<UsageAction>(
-      USAGE_ACTION_KEY,
-      context.getHandler(),
-    );
+    const action = this.reflector.get<UsageAction>(USAGE_ACTION_KEY, context.getHandler());
 
     if (!action) {
       // No usage check required

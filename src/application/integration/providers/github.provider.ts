@@ -1,0 +1,62 @@
+//  GitHub integration provider
+
+import { Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import {
+  IntegrationType,
+  IntegrationProvider,
+  IntegrationConfig,
+  GitHubConfig,
+  SyncResult,
+  ExportResult,
+} from '../interfaces/integration.interface';
+
+@Injectable()
+export class GitHubProvider implements IntegrationProvider {
+  readonly type = IntegrationType.GITHUB;
+  private readonly logger = new Logger(GitHubProvider.name);
+
+  constructor(private configService: ConfigService) {}
+
+  async validateConfig(config: IntegrationConfig): Promise<boolean> {
+    const githubConfig = config as GitHubConfig;
+
+    if (!githubConfig.accessToken || !githubConfig.owner || !githubConfig.repo) {
+      return false;
+    }
+
+    return this.testConnection(config);
+  }
+
+  async testConnection(config: IntegrationConfig): Promise<boolean> {
+    // TODO: Implement GitHub API connection test
+    return true;
+  }
+
+  async sync(integration: any): Promise<SyncResult> {
+    this.logger.log(`Syncing GitHub integration ${integration.id}`);
+
+    return {
+      status: 'success',
+      message: 'GitHub sync completed',
+      syncedItems: 0,
+    };
+  }
+
+  async exportSpecification(specification: any, config: IntegrationConfig): Promise<ExportResult> {
+    // TODO: Implement GitHub issue creation
+    return {
+      externalId: '123',
+      externalUrl: 'https://github.com/owner/repo/issues/123',
+      provider: IntegrationType.GITHUB,
+      createdAt: new Date(),
+    };
+  }
+
+  async processWebhook(integration: any, event: string, payload: any): Promise<void> {
+    this.logger.log(`Processing GitHub webhook: ${event}`);
+    // TODO: Handle GitHub webhook events
+  }
+}
+
+// ============================================

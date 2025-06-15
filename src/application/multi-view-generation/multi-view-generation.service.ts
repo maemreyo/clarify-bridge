@@ -1,4 +1,4 @@
-// Updated: Main multi-view generation service
+//  Main multi-view generation service
 
 import { Injectable, Logger } from '@nestjs/common';
 import { MonitoringService } from '@core/monitoring';
@@ -81,10 +81,16 @@ export class MultiViewGenerationService {
           views.pmView = await this.pmViewGenerator.generatePmView(context, generatorOptions);
         }
         if (viewsToGenerate.includes('frontend')) {
-          views.frontendView = await this.frontendViewGenerator.generateFrontendView(context, generatorOptions);
+          views.frontendView = await this.frontendViewGenerator.generateFrontendView(
+            context,
+            generatorOptions,
+          );
         }
         if (viewsToGenerate.includes('backend')) {
-          views.backendView = await this.backendViewGenerator.generateBackendView(context, generatorOptions);
+          views.backendView = await this.backendViewGenerator.generateBackendView(
+            context,
+            generatorOptions,
+          );
         }
       }
 
@@ -94,12 +100,9 @@ export class MultiViewGenerationService {
       const duration = Date.now() - startTime;
 
       // Track metrics
-      await this.monitoringService.trackAiGeneration(
-        'multi_view_generation',
-        duration,
-        true,
-        { tokens: tokensUsed },
-      );
+      await this.monitoringService.trackAiGeneration('multi_view_generation', duration, true, {
+        tokens: tokensUsed,
+      });
 
       this.logger.log(`Generated ${viewsToGenerate.length} views in ${duration}ms`);
 
@@ -115,11 +118,7 @@ export class MultiViewGenerationService {
     } catch (error) {
       const duration = Date.now() - startTime;
 
-      await this.monitoringService.trackAiGeneration(
-        'multi_view_generation',
-        duration,
-        false,
-      );
+      await this.monitoringService.trackAiGeneration('multi_view_generation', duration, false);
 
       this.logger.error('Multi-view generation failed', error);
       throw error;
@@ -153,11 +152,7 @@ export class MultiViewGenerationService {
 
       const duration = Date.now() - startTime;
 
-      await this.monitoringService.trackAiGeneration(
-        `${viewType}_view_generation`,
-        duration,
-        true,
-      );
+      await this.monitoringService.trackAiGeneration(`${viewType}_view_generation`, duration, true);
 
       return view;
     } catch (error) {
@@ -206,8 +201,8 @@ export class MultiViewGenerationService {
       const storyIds = new Set(views.pmView.userStories.map(s => s.id));
       const hasAllComponents = views.pmView.userStories.every(story =>
         views.frontendView.components.some(comp =>
-          comp.description.toLowerCase().includes(story.title.toLowerCase())
-        )
+          comp.description.toLowerCase().includes(story.title.toLowerCase()),
+        ),
       );
 
       if (!hasAllComponents) {
@@ -218,8 +213,8 @@ export class MultiViewGenerationService {
     // Check if frontend routes have corresponding backend endpoints
     if (views.frontendView && views.backendView) {
       views.frontendView.routes.forEach(route => {
-        const hasEndpoint = views.backendView.endpoints.some(endpoint =>
-          endpoint.path.includes(route.path.split('/')[1]) // Simple check
+        const hasEndpoint = views.backendView.endpoints.some(
+          endpoint => endpoint.path.includes(route.path.split('/')[1]), // Simple check
         );
 
         if (!hasEndpoint && route.path !== '/') {
@@ -236,7 +231,7 @@ export class MultiViewGenerationService {
 
       requiredEntities.forEach(entity => {
         const hasModel = views.backendView.dataModels.some(model =>
-          model.name.toLowerCase().includes(entity.toLowerCase())
+          model.name.toLowerCase().includes(entity.toLowerCase()),
         );
 
         if (!hasModel) {

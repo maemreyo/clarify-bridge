@@ -1,4 +1,4 @@
-// Updated: Job Queue service implementation
+//  Job Queue service implementation
 
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bull';
@@ -53,11 +53,7 @@ export class JobQueueService {
   /**
    * Add a job to the appropriate queue
    */
-  async addJob(
-    queueName: QueueName,
-    data: JobData,
-    options?: JobOptions,
-  ): Promise<Job<JobData>> {
+  async addJob(queueName: QueueName, data: JobData, options?: JobOptions): Promise<Job<JobData>> {
     const queue = this.getQueue(queueName);
     const defaultOptions: JobOptions = {
       attempts: 3,
@@ -74,9 +70,7 @@ export class JobQueueService {
       ...options,
     });
 
-    this.logger.log(
-      `Job ${job.id} of type ${data.type} added to ${queueName} queue`,
-    );
+    this.logger.log(`Job ${job.id} of type ${data.type} added to ${queueName} queue`);
 
     return job;
   }
@@ -101,10 +95,7 @@ export class JobQueueService {
   /**
    * Get job by ID
    */
-  async getJob(
-    queueName: QueueName,
-    jobId: string,
-  ): Promise<Job<JobData> | null> {
+  async getJob(queueName: QueueName, jobId: string): Promise<Job<JobData> | null> {
     const queue = this.getQueue(queueName);
     return queue.getJob(jobId);
   }
@@ -118,14 +109,7 @@ export class JobQueueService {
       return 'not_found';
     }
 
-    const [
-      isCompleted,
-      isFailed,
-      isDelayed,
-      isActive,
-      isWaiting,
-      isPaused,
-    ] = await Promise.all([
+    const [isCompleted, isFailed, isDelayed, isActive, isWaiting, isPaused] = await Promise.all([
       job.isCompleted(),
       job.isFailed(),
       job.isDelayed(),
@@ -149,14 +133,7 @@ export class JobQueueService {
    */
   async getQueueStats(queueName: QueueName) {
     const queue = this.getQueue(queueName);
-    const [
-      waiting,
-      active,
-      completed,
-      failed,
-      delayed,
-      paused,
-    ] = await Promise.all([
+    const [waiting, active, completed, failed, delayed, paused] = await Promise.all([
       queue.getWaitingCount(),
       queue.getActiveCount(),
       queue.getCompletedCount(),
@@ -184,10 +161,7 @@ export class JobQueueService {
     grace: number = 3600000, // 1 hour
   ): Promise<void> {
     const queue = this.getQueue(queueName);
-    await Promise.all([
-      queue.clean(grace, 'completed'),
-      queue.clean(grace, 'failed'),
-    ]);
+    await Promise.all([queue.clean(grace, 'completed'), queue.clean(grace, 'failed')]);
 
     this.logger.log(`Cleaned old jobs from ${queueName} queue`);
   }

@@ -1,4 +1,4 @@
-// Updated: View generation interfaces
+//  View generation interfaces
 
 import { GeneratedViews } from '@application/specification/interfaces/specification.interface';
 import { ProcessedContext, ContextEnhancement } from '@application/context-ingestion';

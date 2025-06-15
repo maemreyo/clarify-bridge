@@ -1,4 +1,4 @@
-// Updated: Redis health indicator
+//  Redis health indicator
 
 import { Injectable } from '@nestjs/common';
 import { HealthIndicator, HealthIndicatorResult, HealthCheckError } from '@nestjs/terminus';
@@ -8,9 +8,7 @@ import { QueueName } from '@core/queue';
 
 @Injectable()
 export class RedisHealthIndicator extends HealthIndicator {
-  constructor(
-    @InjectQueue(QueueName.SPECIFICATION) private queue: Queue,
-  ) {
+  constructor(@InjectQueue(QueueName.SPECIFICATION) private queue: Queue) {
     super();
   }
 

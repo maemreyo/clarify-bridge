@@ -1,4 +1,4 @@
-// Updated: Collaboration interfaces
+//  Collaboration interfaces
 
 import { Comment, Review, ReviewStatus } from '@prisma/client';
 
@@ -47,8 +47,15 @@ export interface CollaborationStats {
 }
 
 export interface RealtimeCollaborationEvent {
-  type: 'user_joined' | 'user_left' | 'comment_added' | 'comment_updated' |
-        'review_submitted' | 'spec_updated' | 'typing' | 'cursor_moved';
+  type:
+    | 'user_joined'
+    | 'user_left'
+    | 'comment_added'
+    | 'comment_updated'
+    | 'review_submitted'
+    | 'spec_updated'
+    | 'typing'
+    | 'cursor_moved';
   userId: string;
   userName: string;
   specificationId: string;

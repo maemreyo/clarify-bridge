@@ -1,4 +1,4 @@
-// Updated: Vector database health indicator
+//  Vector database health indicator
 
 import { Injectable } from '@nestjs/common';
 import { HealthIndicator, HealthIndicatorResult } from '@nestjs/terminus';

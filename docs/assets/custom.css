@@ -1,0 +1,260 @@
+/* docs/assets/custom.css */
+/* Custom styling for The Clarity Bridge documentation */
+
+:root {
+  --color-background: #0f0f0f;
+  --color-background-secondary: #1a1a1a;
+  --color-background-warning: #3d2c00;
+  --color-text: #e0e0e0;
+  --color-text-aside: #b0b0b0;
+  --color-link: #4a9eff;
+  --color-accent: #7c3aed;
+  --color-ts: #3178c6;
+  --color-ts-interface: #2e8b57;
+  --color-ts-enum: #ff6b6b;
+  --color-ts-class: #4ecdc4;
+  --color-ts-function: #f7b731;
+  --color-ts-namespace: #e056fd;
+}
+
+/* Light theme */
+@media (prefers-color-scheme: light) {
+  :root {
+    --color-background: #ffffff;
+    --color-background-secondary: #f8f9fa;
+    --color-background-warning: #fff3cd;
+    --color-text: #212529;
+    --color-text-aside: #6c757d;
+    --color-link: #0066cc;
+    --color-accent: #6c3aed;
+  }
+}
+
+/* Header styling */
+.tsd-page-toolbar {
+  background: var(--color-background-secondary);
+  border-bottom: 1px solid var(--color-accent);
+}
+
+.title {
+  font-weight: 700;
+  background: linear-gradient(135deg, var(--color-accent) 0%, var(--color-link) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Navigation improvements */
+.tsd-navigation {
+  padding: 1rem;
+}
+
+.tsd-navigation a {
+  transition: all 0.2s ease;
+  border-radius: 4px;
+  padding: 0.25rem 0.5rem;
+}
+
+.tsd-navigation a:hover {
+  background: var(--color-background-secondary);
+  color: var(--color-accent);
+}
+
+/* Code blocks */
+pre {
+  background: var(--color-background-secondary) !important;
+  border: 1px solid rgba(124, 58, 237, 0.2);
+  border-radius: 8px;
+  padding: 1rem !important;
+  overflow-x: auto;
+}
+
+code {
+  background: var(--color-background-secondary);
+  padding: 0.2rem 0.4rem;
+  border-radius: 4px;
+  font-size: 0.9em;
+}
+
+/* Syntax highlighting improvements */
+.tsd-signature-symbol {
+  color: var(--color-text-aside);
+}
+
+.tsd-signature-type {
+  color: var(--color-ts);
+}
+
+.tsd-kind-interface .tsd-signature-type {
+  color: var(--color-ts-interface);
+}
+
+.tsd-kind-enum .tsd-signature-type {
+  color: var(--color-ts-enum);
+}
+
+.tsd-kind-class .tsd-signature-type {
+  color: var(--color-ts-class);
+}
+
+/* Tags styling */
+.tsd-tag {
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.85em;
+  font-weight: 500;
+  margin-right: 0.5rem;
+}
+
+.tsd-tag.ts-flagOptional {
+  background: rgba(74, 158, 255, 0.1);
+  color: var(--color-link);
+}
+
+.tsd-tag.ts-flagDeprecated {
+  background: rgba(255, 107, 107, 0.1);
+  color: #ff6b6b;
+}
+
+/* Category badges */
+.category-badge {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.85em;
+  font-weight: 500;
+  margin-left: 0.5rem;
+}
+
+.category-core-services {
+  background: rgba(124, 58, 237, 0.1);
+  color: var(--color-accent);
+}
+
+.category-application-services {
+  background: rgba(74, 158, 255, 0.1);
+  color: var(--color-link);
+}
+
+.category-gateway-services {
+  background: rgba(78, 205, 196, 0.1);
+  color: var(--color-ts-class);
+}
+
+/* Example blocks */
+.tsd-comment pre {
+  background: rgba(124, 58, 237, 0.05);
+  border-left: 3px solid var(--color-accent);
+  margin: 1rem 0;
+}
+
+/* Parameter tables */
+.tsd-parameters,
+.tsd-type-parameters {
+  border: 1px solid var(--color-background-secondary);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.tsd-parameters h5,
+.tsd-type-parameters h5 {
+  margin: 0;
+  padding: 0.75rem 1rem;
+  background: var(--color-background-secondary);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+/* Search improvements */
+#tsd-search input {
+  background: var(--color-background-secondary);
+  border: 1px solid var(--color-accent);
+  border-radius: 8px;
+  padding: 0.5rem 1rem;
+  color: var(--color-text);
+}
+
+#tsd-search input:focus {
+  outline: none;
+  border-color: var(--color-link);
+  box-shadow: 0 0 0 3px rgba(74, 158, 255, 0.1);
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+  .tsd-navigation {
+    padding: 0.5rem;
+  }
+
+  .col-content {
+    padding: 1rem;
+  }
+}
+
+/* Breadcrumb styling */
+.tsd-breadcrumb {
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--color-background-secondary);
+  margin-bottom: 1rem;
+}
+
+.tsd-breadcrumb a {
+  color: var(--color-text-aside);
+  text-decoration: none;
+}
+
+.tsd-breadcrumb a:hover {
+  color: var(--color-accent);
+}
+
+/* Warning and info boxes */
+.tsd-comment .warning {
+  background: var(--color-background-warning);
+  border: 1px solid #856404;
+  border-radius: 4px;
+  padding: 1rem;
+  margin: 1rem 0;
+}
+
+.tsd-comment .info {
+  background: rgba(74, 158, 255, 0.1);
+  border: 1px solid var(--color-link);
+  border-radius: 4px;
+  padding: 1rem;
+  margin: 1rem 0;
+}
+
+/* Hierarchy improvements */
+.tsd-hierarchy {
+  margin: 1rem 0;
+  padding: 1rem;
+  background: var(--color-background-secondary);
+  border-radius: 8px;
+}
+
+/* Footer */
+.tsd-generator {
+  padding: 1rem;
+  text-align: center;
+  border-top: 1px solid var(--color-background-secondary);
+  margin-top: 3rem;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-background);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-accent);
+  border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-link);
+}

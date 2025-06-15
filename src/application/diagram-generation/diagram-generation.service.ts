@@ -1,4 +1,4 @@
-// Updated: Main diagram generation service
+//  Main diagram generation service
 
 import { Injectable, Logger } from '@nestjs/common';
 import { LlmCoreService, PromptTemplate } from '@core/llm';
@@ -29,9 +29,7 @@ export class DiagramGenerationService {
   /**
    * Generate diagram from context
    */
-  async generateDiagram(
-    context: DiagramGenerationContext,
-  ): Promise<GeneratedDiagram> {
+  async generateDiagram(context: DiagramGenerationContext): Promise<GeneratedDiagram> {
     const startTime = Date.now();
 
     try {
@@ -68,12 +66,9 @@ export class DiagramGenerationService {
       metadata.warnings = validation.warnings;
 
       const duration = Date.now() - startTime;
-      await this.monitoringService.trackAiGeneration(
-        'diagram_generation',
-        duration,
-        true,
-        { type: context.type },
-      );
+      await this.monitoringService.trackAiGeneration('diagram_generation', duration, true, {
+        type: context.type,
+      });
 
       return {
         type: context.type,
@@ -84,11 +79,7 @@ export class DiagramGenerationService {
       };
     } catch (error) {
       const duration = Date.now() - startTime;
-      await this.monitoringService.trackAiGeneration(
-        'diagram_generation',
-        duration,
-        false,
-      );
+      await this.monitoringService.trackAiGeneration('diagram_generation', duration, false);
 
       this.logger.error('Diagram generation failed', error);
       throw error;
@@ -209,7 +200,8 @@ Output only the Mermaid.js syntax, starting with the diagram type declaration.`,
 
   private async generateWireframe(context: DiagramGenerationContext): Promise<string> {
     const prompt: PromptTemplate = {
-      system: 'Create a simple wireframe diagram using Mermaid.js graph syntax to represent UI layout and components.',
+      system:
+        'Create a simple wireframe diagram using Mermaid.js graph syntax to represent UI layout and components.',
       user: `Create a wireframe for: ${context.description}
 
 Data: ${JSON.stringify(context.data, null, 2)}
@@ -253,7 +245,9 @@ Create a clear, well-structured Mermaid.js ${context.type} diagram.`,
     }
 
     // Try to find diagram declaration
-    const diagramMatch = content.match(/(graph\s+\w+|sequenceDiagram|classDiagram|stateDiagram|erDiagram|pie|gantt|flowchart\s+\w+)[\s\S]*/);
+    const diagramMatch = content.match(
+      /(graph\s+\w+|sequenceDiagram|classDiagram|stateDiagram|erDiagram|pie|gantt|flowchart\s+\w+)[\s\S]*/,
+    );
     if (diagramMatch) {
       return diagramMatch[0].trim();
     }
@@ -272,7 +266,10 @@ Create a clear, well-structured Mermaid.js ${context.type} diagram.`,
     }
 
     // Check for diagram type declaration
-    const hasValidStart = /^(graph\s+\w+|sequenceDiagram|classDiagram|stateDiagram|erDiagram|pie|gantt|flowchart\s+\w+)/m.test(syntax);
+    const hasValidStart =
+      /^(graph\s+\w+|sequenceDiagram|classDiagram|stateDiagram|erDiagram|pie|gantt|flowchart\s+\w+)/m.test(
+        syntax,
+      );
     if (!hasValidStart) {
       errors.push('Missing or invalid diagram type declaration');
     }
@@ -300,16 +297,17 @@ Create a clear, well-structured Mermaid.js ${context.type} diagram.`,
       isValid: errors.length === 0,
       errors,
       warnings,
-      suggestions: warnings.length > 0 ? ['Consider breaking complex diagrams into smaller parts'] : undefined,
+      suggestions:
+        warnings.length > 0 ? ['Consider breaking complex diagrams into smaller parts'] : undefined,
     };
   }
 
   private countNodes(mermaidSyntax: string): number {
     // Simple heuristic to count nodes
     const nodePatterns = [
-      /^\s*\w+\[/gm,  // Square brackets
-      /^\s*\w+\(/gm,  // Round brackets
-      /^\s*\w+\{/gm,  // Curly brackets
+      /^\s*\w+\[/gm, // Square brackets
+      /^\s*\w+\(/gm, // Round brackets
+      /^\s*\w+\{/gm, // Curly brackets
       /^\s*\w+\[\(/gm, // Stadium shape
       /^\s*participant\s+/gm, // Sequence diagram participants
       /^\s*actor\s+/gm, // Sequence diagram actors

@@ -1,4 +1,4 @@
-// Updated: Monitoring module configuration
+//  Monitoring module configuration
 
 import { Module, Global } from '@nestjs/common';
 import { WinstonModule } from 'nest-winston';

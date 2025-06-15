@@ -1,4 +1,4 @@
-// Updated: Usage tracking interfaces
+//  Usage tracking interfaces
 
 import { SubscriptionTier } from '@prisma/client';
 

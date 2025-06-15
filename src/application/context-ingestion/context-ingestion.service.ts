@@ -1,4 +1,4 @@
-// Updated: Main context ingestion service
+//  Main context ingestion service
 
 import { Injectable, Logger } from '@nestjs/common';
 import { VectorDbService } from '@core/vector-db';
@@ -64,9 +64,7 @@ export class ContextIngestionService {
 
             // Add extracted text to requirements
             if (imageAnalysis.text.length > 0) {
-              processed.keyRequirements.push(
-                ...imageAnalysis.text.map(t => `[From image] ${t}`),
-              );
+              processed.keyRequirements.push(...imageAnalysis.text.map(t => `[From image] ${t}`));
             }
 
             // Add UI elements to technical details
@@ -82,28 +80,20 @@ export class ContextIngestionService {
       // Enhance context if requested
       let enhancement: ContextEnhancement | undefined;
       if (options.includeRelatedSpecs || options.includeTeamKnowledge) {
-        enhancement = await this.enhanceContext(
-          processed,
-          {
-            userId: input.userId,
-            teamId: input.teamId,
-            includeRelatedSpecs: options.includeRelatedSpecs,
-            includeTeamKnowledge: options.includeTeamKnowledge,
-          },
-        );
+        enhancement = await this.enhanceContext(processed, {
+          userId: input.userId,
+          teamId: input.teamId,
+          includeRelatedSpecs: options.includeRelatedSpecs,
+          includeTeamKnowledge: options.includeTeamKnowledge,
+        });
       }
 
       // Track metrics
       const duration = Date.now() - startTime;
-      await this.monitoringService.trackAiGeneration(
-        'context_processing',
-        duration,
-        true,
-        {
-          userId: input.userId,
-          teamId: input.teamId,
-        },
-      );
+      await this.monitoringService.trackAiGeneration('context_processing', duration, true, {
+        userId: input.userId,
+        teamId: input.teamId,
+      });
 
       return {
         processed,
@@ -111,11 +101,7 @@ export class ContextIngestionService {
       };
     } catch (error) {
       const duration = Date.now() - startTime;
-      await this.monitoringService.trackAiGeneration(
-        'context_processing',
-        duration,
-        false,
-      );
+      await this.monitoringService.trackAiGeneration('context_processing', duration, false);
 
       this.logger.error('Context processing failed', error);
       throw error;
@@ -215,8 +201,8 @@ export class ContextIngestionService {
     const content = [
       context.summary,
       ...context.keyRequirements,
-      ...context.userStories || [],
-      ...context.businessRules || [],
+      ...(context.userStories || []),
+      ...(context.businessRules || []),
     ].join('\n');
 
     return this.vectorDbService.storeDocument({
@@ -240,7 +226,14 @@ export class ContextIngestionService {
     const sentences = content.split(/[.!?]+/).filter(s => s.trim());
 
     // Prioritize sentences with key terms
-    const keyTerms = ['approach', 'solution', 'pattern', 'architecture', 'design', 'implementation'];
+    const keyTerms = [
+      'approach',
+      'solution',
+      'pattern',
+      'architecture',
+      'design',
+      'implementation',
+    ];
 
     const insights = sentences
       .filter(sentence => {
@@ -260,9 +253,9 @@ export class ContextIngestionService {
 
     // Check for common architectural patterns
     const architectureKeywords = {
-      'microservices': ['microservice', 'service', 'api gateway'],
-      'monolithic': ['monolith', 'single application'],
-      'serverless': ['lambda', 'function', 'serverless'],
+      microservices: ['microservice', 'service', 'api gateway'],
+      monolithic: ['monolith', 'single application'],
+      serverless: ['lambda', 'function', 'serverless'],
       'event-driven': ['event', 'message', 'queue', 'pub/sub'],
     };
 
@@ -270,7 +263,9 @@ export class ContextIngestionService {
       processed.summary,
       ...processed.keyRequirements,
       ...relatedSpecs.flatMap(s => s.insights),
-    ].join(' ').toLowerCase();
+    ]
+      .join(' ')
+      .toLowerCase();
 
     Object.entries(architectureKeywords).forEach(([pattern, keywords]) => {
       if (keywords.some(keyword => allText.includes(keyword))) {
@@ -280,7 +275,7 @@ export class ContextIngestionService {
 
     // Check for common feature patterns
     const featurePatterns = {
-      'authentication': ['login', 'auth', 'jwt', 'oauth'],
+      authentication: ['login', 'auth', 'jwt', 'oauth'],
       'crud-operations': ['create', 'read', 'update', 'delete', 'crud'],
       'real-time': ['real-time', 'websocket', 'live', 'push'],
       'file-upload': ['upload', 'file', 'attachment', 'media'],

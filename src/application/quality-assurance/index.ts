@@ -1,4 +1,4 @@
-// Updated: Barrel export for quality assurance module
+//  Barrel export for quality assurance module
 
 export * from './quality-assurance.module';
 export * from './quality-assurance.service';

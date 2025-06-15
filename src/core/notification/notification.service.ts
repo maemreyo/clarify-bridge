@@ -1,4 +1,4 @@
-// Updated: Main notification service
+//  Main notification service
 
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -82,11 +82,7 @@ export class NotificationService {
   /**
    * Send email notification based on type
    */
-  async sendEmailNotification(
-    type: NotificationType,
-    email: string,
-    data: Record<string, any>,
-  ) {
+  async sendEmailNotification(type: NotificationType, email: string, data: Record<string, any>) {
     // Map notification type to email template
     const templateMap: Record<NotificationType, string> = {
       [NotificationType.SPEC_COMPLETED]: 'SPEC_COMPLETED',
@@ -105,17 +101,14 @@ export class NotificationService {
     }
 
     // Queue email job
-    await this.jobQueueService.addJob(
-      QueueName.NOTIFICATION,
-      {
-        type: JobType.SEND_EMAIL,
-        payload: {
-          template: templateName,
-          recipients: [email],
-          data,
-        },
+    await this.jobQueueService.addJob(QueueName.NOTIFICATION, {
+      type: JobType.SEND_EMAIL,
+      payload: {
+        template: templateName,
+        recipients: [email],
+        data,
       },
-    );
+    });
   }
 
   /**
@@ -127,12 +120,7 @@ export class NotificationService {
     content: { text?: string; html?: string },
     options?: any,
   ) {
-    const result = await this.emailProvider.sendEmail(
-      recipients,
-      subject,
-      content,
-      options,
-    );
+    const result = await this.emailProvider.sendEmail(recipients, subject, content, options);
 
     if (!result.success) {
       throw new Error(`Failed to send email: ${result.error}`);
@@ -286,9 +274,7 @@ export class NotificationService {
     });
 
     const notifications = await Promise.all(
-      teamMembers.map(member =>
-        this.sendNotification(member.userId, type, data),
-      ),
+      teamMembers.map(member => this.sendNotification(member.userId, type, data)),
     );
 
     return { sent: notifications.length };

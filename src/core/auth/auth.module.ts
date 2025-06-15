@@ -1,4 +1,4 @@
-// Updated: Complete authentication module
+//  Complete authentication module
 
 import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';

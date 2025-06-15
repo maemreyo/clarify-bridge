@@ -1,4 +1,4 @@
-// Updated: Barrel export for vector database module
+//  Barrel export for vector database module
 
 export * from './vector-db.module';
 export * from './vector-db.service';

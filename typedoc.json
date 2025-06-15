@@ -1,0 +1,53 @@
+{
+  "entryPoints": ["src"],
+  "entryPointStrategy": "expand",
+  "out": "docs/api",
+  "name": "The Clarity Bridge - API Documentation",
+  "includeVersion": true,
+  "readme": "README.md",
+  "theme": "default",
+  "excludePrivate": true,
+  "excludeProtected": false,
+  "excludeInternal": true,
+  "excludeExternals": false,
+  "disableSources": false,
+  "searchInComments": true,
+  "categorizeByGroup": true,
+  "hideGenerator": false,
+  "gitRevision": "main",
+  "plugin": [
+    "typedoc-plugin-markdown",
+    "typedoc-theme-hierarchy"
+  ],
+  "exclude": [
+    "**/*.spec.ts",
+    "**/*.test.ts",
+    "**/node_modules/**",
+    "**/dist/**"
+  ],
+  "externalPattern": [
+    "**/node_modules/**"
+  ],
+  "excludeCategories": [],
+  "categoryOrder": [
+    "Core Services",
+    "Application Services",
+    "Gateway Services",
+    "DTOs",
+    "Interfaces",
+    "Guards",
+    "Decorators",
+    "Other"
+  ],
+  "navigation": {
+    "includeCategories": true,
+    "includeGroups": true,
+    "includeFolders": true
+  },
+  "sidebarLinks": {
+    "GitHub": "https://github.com/your-org/the-clarity-bridge",
+    "Documentation": "/",
+    "API Reference": "/api"
+  },
+  "customCss": "./docs/assets/custom.css"
+}

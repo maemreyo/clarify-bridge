@@ -1,4 +1,4 @@
-// Updated: Text processing utilities
+//  Text processing utilities
 
 import { Injectable, Logger } from '@nestjs/common';
 import { LlmCoreService, PromptTemplate } from '@core/llm';
@@ -113,11 +113,13 @@ Format as JSON with arrays for each category.`,
         maxTokens: 1000,
       });
 
-      return this.parseAIResponse(result.content) || {
-        entities: [],
-        concepts: [],
-        technologies: [],
-      };
+      return (
+        this.parseAIResponse(result.content) || {
+          entities: [],
+          concepts: [],
+          technologies: [],
+        }
+      );
     } catch (error) {
       this.logger.error('Entity extraction failed', error);
       return {
@@ -137,7 +139,8 @@ Format as JSON with arrays for each category.`,
     }
 
     const prompt: PromptTemplate = {
-      system: 'You are a technical documentation expert. Create concise summaries that preserve all key technical details.',
+      system:
+        'You are a technical documentation expert. Create concise summaries that preserve all key technical details.',
       user: `Summarize the following text in approximately ${Math.floor(maxLength / 5)} words, focusing on key requirements and technical details:
 
 ${text}`,
@@ -179,10 +182,7 @@ ${text}`,
     }
   }
 
-  private analyzeComplexity(
-    wordCount: number,
-    extracted: any,
-  ): 'simple' | 'moderate' | 'complex' {
+  private analyzeComplexity(wordCount: number, extracted: any): 'simple' | 'moderate' | 'complex' {
     let score = 0;
 
     // Word count factor
@@ -224,11 +224,12 @@ ${text}`,
   private basicTextExtraction(text: string, wordCount: number): ProcessedContext {
     // Basic extraction without AI
     const lines = text.split('\n').filter(line => line.trim());
-    const requirements = lines.filter(line =>
-      line.match(/^[-*•]/) || // Bullet points
-      line.match(/^\d+\./) || // Numbered lists
-      line.toLowerCase().includes('must') ||
-      line.toLowerCase().includes('should')
+    const requirements = lines.filter(
+      line =>
+        line.match(/^[-*•]/) || // Bullet points
+        line.match(/^\d+\./) || // Numbered lists
+        line.toLowerCase().includes('must') ||
+        line.toLowerCase().includes('should'),
     );
 
     return {
@@ -271,10 +272,26 @@ ${text}`,
 
   private extractTechnologies(text: string): string[] {
     const techKeywords = [
-      'react', 'angular', 'vue', 'node', 'express', 'nestjs',
-      'python', 'django', 'flask', 'java', 'spring',
-      'postgresql', 'mysql', 'mongodb', 'redis',
-      'aws', 'azure', 'gcp', 'docker', 'kubernetes',
+      'react',
+      'angular',
+      'vue',
+      'node',
+      'express',
+      'nestjs',
+      'python',
+      'django',
+      'flask',
+      'java',
+      'spring',
+      'postgresql',
+      'mysql',
+      'mongodb',
+      'redis',
+      'aws',
+      'azure',
+      'gcp',
+      'docker',
+      'kubernetes',
     ];
 
     const found: string[] = [];

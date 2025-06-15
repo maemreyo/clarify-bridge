@@ -1,4 +1,4 @@
-// Updated: Winston logger configuration
+//  Winston logger configuration
 
 import * as winston from 'winston';
 import { utilities as nestWinstonModuleUtilities } from 'nest-winston';

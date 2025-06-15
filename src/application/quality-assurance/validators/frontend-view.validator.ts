@@ -1,8 +1,12 @@
-// Updated: Frontend view quality validator
+//  Frontend view quality validator
 
 import { Injectable } from '@nestjs/common';
 import { GeneratedViews } from '@application/specification/interfaces/specification.interface';
-import { QualityIssue, IssueType, ViewQualityScore } from '../interfaces/quality-assurance.interface';
+import {
+  QualityIssue,
+  IssueType,
+  ViewQualityScore,
+} from '../interfaces/quality-assurance.interface';
 
 @Injectable()
 export class FrontendViewValidator {
@@ -68,9 +72,7 @@ export class FrontendViewValidator {
       scores.completeness -= 0.2;
     } else {
       // Check for authentication on routes
-      const protectedRoutes = frontendView.routes.filter(r =>
-        r.guards && r.guards.length > 0
-      );
+      const protectedRoutes = frontendView.routes.filter(r => r.guards && r.guards.length > 0);
 
       if (protectedRoutes.length === 0) {
         issues.push({
@@ -109,12 +111,11 @@ export class FrontendViewValidator {
     }
 
     // Calculate overall score
-    const overall = (
+    const overall =
       scores.completeness * 0.4 +
       scores.clarity * 0.2 +
       scores.consistency * 0.2 +
-      scores.technicalAccuracy * 0.2
-    );
+      scores.technicalAccuracy * 0.2;
 
     return {
       score: {

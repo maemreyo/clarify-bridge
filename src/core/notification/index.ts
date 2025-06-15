@@ -1,4 +1,4 @@
-// Updated: Barrel export for notification module
+//  Barrel export for notification module
 
 export * from './notification.module';
 export * from './notification.service';

@@ -1,4 +1,4 @@
-// Updated: Team management service
+//  Team management service
 
 import {
   Injectable,
@@ -10,12 +10,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '@core/database';
 import { TeamRole, Prisma } from '@prisma/client';
-import {
-  CreateTeamDto,
-  UpdateTeamDto,
-  InviteUserDto,
-  UpdateMemberRoleDto,
-} from './dto/team.dto';
+import { CreateTeamDto, UpdateTeamDto, InviteUserDto, UpdateMemberRoleDto } from './dto/team.dto';
 
 @Injectable()
 export class TeamService {
@@ -449,11 +444,7 @@ export class TeamService {
   /**
    * Check if user has required role in team
    */
-  private async checkTeamPermission(
-    teamId: string,
-    userId: string,
-    requiredRoles: TeamRole[],
-  ) {
+  private async checkTeamPermission(teamId: string, userId: string, requiredRoles: TeamRole[]) {
     const member = await this.prisma.teamMember.findUnique({
       where: {
         userId_teamId: {
@@ -468,9 +459,7 @@ export class TeamService {
     }
 
     if (!requiredRoles.includes(member.role)) {
-      throw new ForbiddenException(
-        `You need one of these roles: ${requiredRoles.join(', ')}`,
-      );
+      throw new ForbiddenException(`You need one of these roles: ${requiredRoles.join(', ')}`);
     }
 
     return member;

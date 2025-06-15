@@ -1,4 +1,4 @@
-// Updated: Context ingestion interfaces
+//  Context ingestion interfaces
 
 export interface ProcessedContext {
   summary: string;

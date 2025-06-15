@@ -1,4 +1,4 @@
-// Updated: Barrel export for LLM module
+//  Barrel export for LLM module
 
 export * from './llm-core.module';
 export * from './llm-core.service';

@@ -1,8 +1,11 @@
-// Updated: Frontend view generator implementation
+//  Frontend view generator implementation
 
 import { Injectable, Logger } from '@nestjs/common';
 import { LlmCoreService, PromptTemplate } from '@core/llm';
-import { ViewGenerationContext, ViewGeneratorOptions } from '../interfaces/view-generation.interface';
+import {
+  ViewGenerationContext,
+  ViewGeneratorOptions,
+} from '../interfaces/view-generation.interface';
 import { GeneratedViews } from '@application/specification/interfaces/specification.interface';
 
 @Injectable()
@@ -63,17 +66,29 @@ ${context.processed.summary}
 Key Features:
 ${context.processed.keyRequirements.map(r => `- ${r}`).join('\n')}
 
-${context.processed.technicalDetails.uiComponents ? `
+${
+  context.processed.technicalDetails.uiComponents
+    ? `
 UI Components Identified:
 ${context.processed.technicalDetails.uiComponents.join('\n')}
-` : ''}
+`
+    : ''
+}
 
-${context.enhancement?.suggestedTechnologies.length ? `
+${
+  context.enhancement?.suggestedTechnologies.length
+    ? `
 Suggested Technologies:
-${context.enhancement.suggestedTechnologies.filter(t =>
-  ['react', 'vue', 'angular', 'nextjs', 'typescript', 'tailwind', 'material-ui'].includes(t.toLowerCase())
-).join(', ')}
-` : ''}
+${context.enhancement.suggestedTechnologies
+  .filter(t =>
+    ['react', 'vue', 'angular', 'nextjs', 'typescript', 'tailwind', 'material-ui'].includes(
+      t.toLowerCase(),
+    ),
+  )
+  .join(', ')}
+`
+    : ''
+}
 
 === OUTPUT FORMAT ===
 Generate a Frontend specification in the following JSON format:

@@ -1,4 +1,4 @@
-// Updated: Email template definitions
+//  Email template definitions
 
 export interface EmailTemplate {
   subject: string;
@@ -36,7 +36,12 @@ export const EMAIL_TEMPLATES: Record<string, (data: any) => EmailTemplate> = {
     `,
   }),
 
-  TEAM_INVITATION: (data: { inviteeName: string; teamName: string; inviterName: string; inviteLink: string }) => ({
+  TEAM_INVITATION: (data: {
+    inviteeName: string;
+    teamName: string;
+    inviterName: string;
+    inviteLink: string;
+  }) => ({
     subject: `You've been invited to join "${data.teamName}"`,
     text: `Hi ${data.inviteeName},\n\n${data.inviterName} has invited you to join the team "${data.teamName}" on The Clarity Bridge.\n\nAccept invitation: ${data.inviteLink}\n\nBest regards,\nThe Clarity Bridge Team`,
     html: `

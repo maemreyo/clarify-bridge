@@ -1,4 +1,4 @@
-// Updated: ER diagram generator
+//  ER diagram generator
 
 import { Injectable } from '@nestjs/common';
 
@@ -21,10 +21,7 @@ interface ERRelationship {
 
 @Injectable()
 export class EntityRelationshipGenerator {
-  generateERDiagram(
-    entities: EREntity[],
-    relationships: ERRelationship[],
-  ): string {
+  generateERDiagram(entities: EREntity[], relationships: ERRelationship[]): string {
     let mermaid = 'erDiagram\n';
 
     // Add entities
@@ -51,23 +48,25 @@ export class EntityRelationshipGenerator {
     return mermaid;
   }
 
-  generateFromDataModels(dataModels: Array<{
-    name: string;
-    description: string;
-    fields: Array<{
+  generateFromDataModels(
+    dataModels: Array<{
       name: string;
-      type: string;
-      required: boolean;
-      description?: string;
-    }>;
-    relationships?: string[];
-  }>): string {
+      description: string;
+      fields: Array<{
+        name: string;
+        type: string;
+        required: boolean;
+        description?: string;
+      }>;
+      relationships?: string[];
+    }>,
+  ): string {
     const entities: EREntity[] = dataModels.map(model => ({
       name: model.name,
       attributes: model.fields.map((field, index) => ({
         name: field.name,
         type: field.type,
-        key: index === 0 ? 'PK' as const : undefined, // Assume first field is PK
+        key: index === 0 ? ('PK' as const) : undefined, // Assume first field is PK
         required: field.required,
       })),
     }));
@@ -101,19 +100,19 @@ export class EntityRelationshipGenerator {
 
   private mapDataType(type: string): string {
     const typeMap: Record<string, string> = {
-      'string': 'string',
-      'text': 'text',
-      'number': 'int',
-      'integer': 'int',
-      'float': 'float',
-      'double': 'double',
-      'boolean': 'boolean',
-      'bool': 'boolean',
-      'date': 'date',
-      'datetime': 'datetime',
-      'timestamp': 'timestamp',
-      'json': 'json',
-      'array': 'array',
+      string: 'string',
+      text: 'text',
+      number: 'int',
+      integer: 'int',
+      float: 'float',
+      double: 'double',
+      boolean: 'boolean',
+      bool: 'boolean',
+      date: 'date',
+      datetime: 'datetime',
+      timestamp: 'timestamp',
+      json: 'json',
+      array: 'array',
     };
 
     return typeMap[type.toLowerCase()] || 'string';

@@ -1,4 +1,4 @@
-// Updated: Vector database provider interface
+//  Vector database provider interface
 
 export interface VectorMetadata {
   id: string;
@@ -51,18 +51,12 @@ export interface VectorProvider {
   /**
    * Search for similar vectors
    */
-  search(
-    embedding: number[],
-    options?: VectorSearchOptions,
-  ): Promise<VectorSearchResult[]>;
+  search(embedding: number[], options?: VectorSearchOptions): Promise<VectorSearchResult[]>;
 
   /**
    * Search by text (will generate embedding internally)
    */
-  searchByText(
-    text: string,
-    options?: VectorSearchOptions,
-  ): Promise<VectorSearchResult[]>;
+  searchByText(text: string, options?: VectorSearchOptions): Promise<VectorSearchResult[]>;
 
   /**
    * Delete vectors by ID

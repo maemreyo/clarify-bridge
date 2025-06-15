@@ -1,4 +1,4 @@
-// Updated: In-memory vector provider for development/testing
+//  In-memory vector provider for development/testing
 
 import { Injectable, Logger } from '@nestjs/common';
 import { LlmCoreService } from '@core/llm';
@@ -38,10 +38,7 @@ export class MemoryVectorProvider implements VectorProvider {
     this.logger.log(`Upserted ${documents.length} vectors to memory`);
   }
 
-  async search(
-    embedding: number[],
-    options?: VectorSearchOptions,
-  ): Promise<VectorSearchResult[]> {
+  async search(embedding: number[], options?: VectorSearchOptions): Promise<VectorSearchResult[]> {
     const results: VectorSearchResult[] = [];
 
     // Calculate cosine similarity for all documents
@@ -70,10 +67,7 @@ export class MemoryVectorProvider implements VectorProvider {
     return results.slice(0, options?.topK || 10);
   }
 
-  async searchByText(
-    text: string,
-    options?: VectorSearchOptions,
-  ): Promise<VectorSearchResult[]> {
+  async searchByText(text: string, options?: VectorSearchOptions): Promise<VectorSearchResult[]> {
     const result = await this.llmService.generateEmbedding(text);
     return this.search(result.embedding, options);
   }

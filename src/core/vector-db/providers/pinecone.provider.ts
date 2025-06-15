@@ -1,4 +1,4 @@
-// Updated: Pinecone vector database provider
+//  Pinecone vector database provider
 
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -129,10 +129,7 @@ export class PineconeProvider implements VectorProvider {
     }
   }
 
-  async search(
-    embedding: number[],
-    options?: VectorSearchOptions,
-  ): Promise<VectorSearchResult[]> {
+  async search(embedding: number[], options?: VectorSearchOptions): Promise<VectorSearchResult[]> {
     await this.ensureInitialized();
 
     try {
@@ -163,10 +160,7 @@ export class PineconeProvider implements VectorProvider {
     }
   }
 
-  async searchByText(
-    text: string,
-    options?: VectorSearchOptions,
-  ): Promise<VectorSearchResult[]> {
+  async searchByText(text: string, options?: VectorSearchOptions): Promise<VectorSearchResult[]> {
     try {
       // Generate embedding for search text
       const embeddingResult = await this.llmService.generateEmbedding(text);

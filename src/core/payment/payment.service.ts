@@ -1,4 +1,4 @@
-// Updated: Payment and subscription management service
+//  Payment and subscription management service
 
 import {
   Injectable,
@@ -64,9 +64,10 @@ export class PaymentService {
       throw new BadRequestException('Invalid subscription tier');
     }
 
-    const priceId = data.interval === 'yearly'
-      ? priceConfig.stripePriceIdYearly
-      : priceConfig.stripePriceIdMonthly;
+    const priceId =
+      data.interval === 'yearly'
+        ? priceConfig.stripePriceIdYearly
+        : priceConfig.stripePriceIdMonthly;
 
     if (!priceId) {
       throw new BadRequestException('Price not configured for this tier');
@@ -124,10 +125,7 @@ export class PaymentService {
   /**
    * Update subscription
    */
-  async updateSubscription(
-    userId: string,
-    data: SubscriptionUpdateData,
-  ): Promise<void> {
+  async updateSubscription(userId: string, data: SubscriptionUpdateData): Promise<void> {
     if (!this.stripe) {
       throw new InternalServerErrorException('Payment system not configured');
     }
@@ -159,9 +157,8 @@ export class PaymentService {
       // Determine new price
       const currentInterval = subscription.items.data[0].price.recurring?.interval;
       const interval = data.interval || (currentInterval === 'year' ? 'yearly' : 'monthly');
-      const priceId = interval === 'yearly'
-        ? priceConfig.stripePriceIdYearly
-        : priceConfig.stripePriceIdMonthly;
+      const priceId =
+        interval === 'yearly' ? priceConfig.stripePriceIdYearly : priceConfig.stripePriceIdMonthly;
 
       if (!priceId) {
         throw new BadRequestException('Price not configured for this tier');
@@ -233,12 +230,9 @@ export class PaymentService {
 
     try {
       // Cancel at period end
-      await this.stripe.subscriptions.update(
-        user.subscription.stripeSubscriptionId!,
-        {
-          cancel_at_period_end: true,
-        },
-      );
+      await this.stripe.subscriptions.update(user.subscription.stripeSubscriptionId!, {
+        cancel_at_period_end: true,
+      });
 
       // Update database
       await this.prisma.subscription.update({
@@ -267,10 +261,7 @@ export class PaymentService {
   /**
    * Create customer portal session
    */
-  async createCustomerPortalSession(
-    userId: string,
-    returnUrl: string,
-  ): Promise<string> {
+  async createCustomerPortalSession(userId: string, returnUrl: string): Promise<string> {
     if (!this.stripe) {
       throw new InternalServerErrorException('Payment system not configured');
     }
@@ -361,11 +352,13 @@ export class PaymentService {
 
     return {
       currentTier,
-      subscription: subscription ? {
-        status: subscription.status,
-        currentPeriodStart: subscription.currentPeriodStart,
-        currentPeriodEnd: subscription.currentPeriodEnd,
-      } : null,
+      subscription: subscription
+        ? {
+            status: subscription.status,
+            currentPeriodStart: subscription.currentPeriodStart,
+            currentPeriodEnd: subscription.currentPeriodEnd,
+          }
+        : null,
       pricing: Object.values(PRICING_CONFIG).map(config => ({
         tier: config.tier,
         name: config.name,
@@ -389,9 +382,7 @@ export class PaymentService {
       return;
     }
 
-    const subscription = await this.stripe.subscriptions.retrieve(
-      session.subscription as string,
-    );
+    const subscription = await this.stripe.subscriptions.retrieve(session.subscription as string);
 
     // Create or update subscription record
     await this.prisma.subscription.upsert({
@@ -421,15 +412,11 @@ export class PaymentService {
     });
 
     // Send welcome notification
-    await this.notificationService.sendNotification(
-      userId,
-      NotificationType.SUBSCRIPTION_UPDATE,
-      {
-        title: 'Welcome to ' + PRICING_CONFIG[tier].name + '!',
-        content: 'Your subscription is now active. Enjoy all the features!',
-        metadata: { tier },
-      },
-    );
+    await this.notificationService.sendNotification(userId, NotificationType.SUBSCRIPTION_UPDATE, {
+      title: 'Welcome to ' + PRICING_CONFIG[tier].name + '!',
+      content: 'Your subscription is now active. Enjoy all the features!',
+      metadata: { tier },
+    });
 
     this.logger.log(`Subscription activated for user ${userId}`);
   }

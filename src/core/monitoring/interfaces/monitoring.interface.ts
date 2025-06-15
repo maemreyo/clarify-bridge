@@ -1,4 +1,4 @@
-// Updated: Monitoring interfaces
+//  Monitoring interfaces
 
 export interface MetricData {
   name: string;
