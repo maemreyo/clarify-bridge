@@ -8,6 +8,7 @@ export enum QueueName {
   SPECIFICATION = 'specification',
   NOTIFICATION = 'notification',
   ANALYTICS = 'analytics',
+  INTEGRATION = 'integration',
 }
 
 export enum JobType {
@@ -24,6 +25,9 @@ export enum JobType {
   // Analytics jobs
   TRACK_EVENT = 'track_event',
   GENERATE_REPORT = 'generate_report',
+
+  // Integration
+  SYNC_INTEGRATION = 'sync_integration',
 }
 
 export interface JobData {

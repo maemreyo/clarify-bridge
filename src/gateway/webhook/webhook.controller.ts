@@ -11,6 +11,7 @@ import {
   Logger,
   RawBodyRequest,
   Req,
+  Param,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiExcludeEndpoint } from '@nestjs/swagger';
 import { Public } from '@core/auth/decorators/public.decorator';
@@ -46,7 +47,7 @@ export class WebhookController {
         throw new BadRequestException('Missing raw body');
       }
 
-      await this.paymentService.handleWebhook(rawBody.toString(), signature);
+      await this.paymentService.handleWebhookEvent(rawBody.toString(), signature);
 
       return { received: true };
     } catch (error) {

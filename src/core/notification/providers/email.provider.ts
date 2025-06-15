@@ -38,7 +38,7 @@ export class EmailProvider implements NotificationProvider {
       return;
     }
 
-    this.transporter = nodemailer.createTransporter(emailConfig);
+    this.transporter = nodemailer.createTransport(emailConfig);
     this.isConfigured = true;
     this.logger.log('Email provider initialized');
   }

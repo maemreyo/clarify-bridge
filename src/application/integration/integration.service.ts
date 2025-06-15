@@ -23,6 +23,7 @@ import { LinearProvider } from './providers/linear.provider';
 import { NotionProvider } from './providers/notion.provider';
 import { GitHubProvider } from './providers/github.provider';
 import { SlackProvider } from './providers/slack.provider';
+import { NotificationType } from '@prisma/client';
 
 @Injectable()
 export class IntegrationService {
@@ -110,13 +111,9 @@ export class IntegrationService {
     await this.queueSync(integration.id, 'initial');
 
     // Send notification
-    await this.notificationService.sendNotification({
-      type: 'INTEGRATION_CREATED',
-      userId,
-      data: {
-        integrationType: dto.type,
-        teamName: team.name,
-      },
+    await this.notificationService.sendNotification(userId, NotificationType.INTEGRATION_CREATED, {
+      title: `New ${dto.type} integration`,
+      metadata: { integrationType: dto.type, teamName: team.name },
     });
 
     // Track activity
@@ -163,7 +160,7 @@ export class IntegrationService {
 
     // Validate new config if provided
     if (dto.config) {
-      const provider = this.providers.get(integration.type);
+      const provider = this.providers.get(integration.type as IntegrationType);
       const isValid = await provider.validateConfig(dto.config);
       if (!isValid) {
         throw new BadRequestException('Invalid integration configuration');
@@ -294,7 +291,7 @@ export class IntegrationService {
     // Mask sensitive config data
     return integrations.map(integration => ({
       ...integration,
-      config: this.maskSensitiveConfig(integration.type, integration.config),
+      config: this.maskSensitiveConfig(integration.type as IntegrationType, integration.config),
     }));
   }
 
@@ -311,13 +308,9 @@ export class IntegrationService {
     });
 
     // Notify
-    await this.notificationService.sendNotification({
-      type: 'INTEGRATION_REMOVED',
-      userId,
-      data: {
-        integrationType: integration.type,
-        teamName: integration.team.name,
-      },
+    await this.notificationService.sendNotification(userId, NotificationType.INTEGRATION_REMOVED, {
+      title: `${integration.type.toUpperCase()} integration removed`,
+      metadata: { integrationType: integration.type, teamName: integration.team.name },
     });
 
     this.logger.log(`Integration deleted: ${integrationId}`);

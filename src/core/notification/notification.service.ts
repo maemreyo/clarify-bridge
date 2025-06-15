@@ -84,13 +84,36 @@ export class NotificationService {
    */
   async sendEmailNotification(type: NotificationType, email: string, data: Record<string, any>) {
     // Map notification type to email template
+
     const templateMap: Record<NotificationType, string> = {
+      // Specification events
+      [NotificationType.SPEC_CREATED]: 'SPEC_CREATED',
+      [NotificationType.SPEC_UPDATED]: 'SPEC_UPDATED',
+      [NotificationType.SPEC_APPROVED]: 'SPEC_APPROVED',
+      [NotificationType.SPEC_REJECTED]: 'SPEC_REJECTED',
       [NotificationType.SPEC_COMPLETED]: 'SPEC_COMPLETED',
+
+      // Collaboration events
       [NotificationType.COMMENT_ADDED]: 'COMMENT_ADDED',
+      [NotificationType.COMMENT_REPLY]: 'COMMENT_REPLY',
       [NotificationType.REVIEW_REQUESTED]: 'REVIEW_REQUESTED',
       [NotificationType.REVIEW_COMPLETED]: 'REVIEW_COMPLETED',
+
+      // Team events
       [NotificationType.TEAM_INVITATION]: 'TEAM_INVITATION',
+      [NotificationType.MEMBER_JOINED]: 'MEMBER_JOINED',
+      [NotificationType.MEMBER_LEFT]: 'MEMBER_LEFT',
+
+      // Integration events
+      [NotificationType.INTEGRATION_CREATED]: 'INTEGRATION_CREATED',
+      [NotificationType.INTEGRATION_ERROR]: 'INTEGRATION_ERROR',
+      [NotificationType.INTEGRATION_REMOVED]: 'INTEGRATION_REMOVED',
+
+      // System events
+      [NotificationType.USAGE_LIMIT_WARNING]: 'USAGE_LIMIT_WARNING',
+      [NotificationType.SUBSCRIPTION_EXPIRING]: 'SUBSCRIPTION_EXPIRING',
       [NotificationType.SUBSCRIPTION_UPDATE]: 'SUBSCRIPTION_UPDATE',
+      [NotificationType.SYSTEM_UPDATE]: 'SYSTEM_UPDATE',
       [NotificationType.SYSTEM_ALERT]: 'SYSTEM_ALERT',
     };
 

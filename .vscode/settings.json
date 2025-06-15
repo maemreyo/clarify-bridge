@@ -38,5 +38,6 @@
     "streetsidesoftware.code-spell-checker",
     "bierner.markdown-mermaid",
     "yzhang.markdown-all-in-one"
-  ]
+  ],
+  "zencoder.enableRepoIndexing": true
 }

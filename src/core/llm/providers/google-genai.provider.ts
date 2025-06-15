@@ -46,9 +46,7 @@ export class GoogleGenAIProvider implements LLMProvider, LLMEmbeddingProvider {
     }
 
     try {
-      await this.chatModel.invoke([new HumanMessage('test')], {
-        maxTokens: 1,
-      });
+      await this.chatModel.invoke([new HumanMessage('test')]);
       return true;
     } catch (error) {
       this.logger.warn(`Google GenAI provider is not available: ${error.message}`);
@@ -59,19 +57,19 @@ export class GoogleGenAIProvider implements LLMProvider, LLMEmbeddingProvider {
   async generateText(prompt: string, options?: LLMGenerationOptions): Promise<LLMGenerationResult> {
     try {
       const response = await this.chatModel.invoke([new HumanMessage(prompt)], {
-        temperature: options?.temperature,
-        maxOutputTokens: options?.maxTokens,
-        topP: options?.topP,
-        stopSequences: options?.stopSequences,
+        // temperature: options?.temperature,
+        // maxOutputTokens: options?.maxTokens,
+        // topP: options?.topP,
+        // stopSequences: options?.stopSequences,
       });
 
       return {
         content: response.content.toString(),
-        usage: response.usage_metadata
+        usage: response.response_metadata
           ? {
-              promptTokens: response.usage_metadata.input_tokens || 0,
-              completionTokens: response.usage_metadata.output_tokens || 0,
-              totalTokens: response.usage_metadata.total_tokens || 0,
+              promptTokens: response.response_metadata.input_tokens || 0,
+              completionTokens: response.response_metadata.output_tokens || 0,
+              totalTokens: response.response_metadata.total_tokens || 0,
             }
           : undefined,
         model: options?.model || 'gemini-pro',
@@ -100,19 +98,19 @@ export class GoogleGenAIProvider implements LLMProvider, LLMEmbeddingProvider {
       });
 
       const response = await this.chatModel.invoke(langchainMessages, {
-        temperature: options?.temperature,
-        maxOutputTokens: options?.maxTokens,
-        topP: options?.topP,
-        stopSequences: options?.stopSequences,
+        // temperature: options?.temperature,
+        // maxOutputTokens: options?.maxTokens,
+        // topP: options?.topP,
+        // stopSequences: options?.stopSequences,
       });
 
       return {
         content: response.content.toString(),
-        usage: response.usage_metadata
+        usage: response.response_metadata
           ? {
-              promptTokens: response.usage_metadata.input_tokens || 0,
-              completionTokens: response.usage_metadata.output_tokens || 0,
-              totalTokens: response.usage_metadata.total_tokens || 0,
+              promptTokens: response.response_metadata.input_tokens || 0,
+              completionTokens: response.response_metadata.output_tokens || 0,
+              totalTokens: response.response_metadata.total_tokens || 0,
             }
           : undefined,
         model: options?.model || 'gemini-pro',

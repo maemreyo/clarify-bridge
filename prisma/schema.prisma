@@ -353,6 +353,7 @@ enum NotificationType {
   SPEC_UPDATED
   SPEC_APPROVED
   SPEC_REJECTED
+  SPEC_COMPLETED
 
   // Collaboration events
   COMMENT_ADDED
@@ -373,7 +374,9 @@ enum NotificationType {
   // System events
   USAGE_LIMIT_WARNING
   SUBSCRIPTION_EXPIRING
+  SUBSCRIPTION_UPDATE
   SYSTEM_UPDATE
+  SYSTEM_ALERT
 }
 
 // ============================================
