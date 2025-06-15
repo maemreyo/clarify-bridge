@@ -48,7 +48,7 @@ export class OpenAIProvider implements LLMProvider, LLMEmbeddingProvider {
     try {
       // Test with a simple prompt
       await this.chatModel.invoke([new HumanMessage('test')], {
-        maxTokens: 1,
+        // maxTokens: 1,
       });
       return true;
     } catch (error) {
@@ -60,21 +60,21 @@ export class OpenAIProvider implements LLMProvider, LLMEmbeddingProvider {
   async generateText(prompt: string, options?: LLMGenerationOptions): Promise<LLMGenerationResult> {
     try {
       const response = await this.chatModel.invoke([new HumanMessage(prompt)], {
-        temperature: options?.temperature,
-        maxTokens: options?.maxTokens,
-        topP: options?.topP,
-        frequencyPenalty: options?.frequencyPenalty,
-        presencePenalty: options?.presencePenalty,
-        stop: options?.stopSequences,
+        // temperature: options?.temperature,
+        // maxTokens: options?.maxTokens,
+        // topP: options?.topP,
+        // frequencyPenalty: options?.frequencyPenalty,
+        // presencePenalty: options?.presencePenalty,
+        // stop: options?.stopSequences,
       });
 
       return {
         content: response.content.toString(),
-        usage: response.usage_metadata
+        usage: response.response_metadata
           ? {
-              promptTokens: response.usage_metadata.input_tokens || 0,
-              completionTokens: response.usage_metadata.output_tokens || 0,
-              totalTokens: response.usage_metadata.total_tokens || 0,
+              promptTokens: response.response_metadata.input_tokens || 0,
+              completionTokens: response.response_metadata.output_tokens || 0,
+              totalTokens: response.response_metadata.total_tokens || 0,
             }
           : undefined,
         model: options?.model || 'gpt-4-turbo-preview',
@@ -103,21 +103,21 @@ export class OpenAIProvider implements LLMProvider, LLMEmbeddingProvider {
       });
 
       const response = await this.chatModel.invoke(langchainMessages, {
-        temperature: options?.temperature,
-        maxTokens: options?.maxTokens,
-        topP: options?.topP,
-        frequencyPenalty: options?.frequencyPenalty,
-        presencePenalty: options?.presencePenalty,
-        stop: options?.stopSequences,
+        // temperature: options?.temperature,
+        // maxTokens: options?.maxTokens,
+        // topP: options?.topP,
+        // frequencyPenalty: options?.frequencyPenalty,
+        // presencePenalty: options?.presencePenalty,
+        // stop: options?.stopSequences,
       });
 
       return {
         content: response.content.toString(),
-        usage: response.usage_metadata
+        usage: response.response_metadata
           ? {
-              promptTokens: response.usage_metadata.input_tokens || 0,
-              completionTokens: response.usage_metadata.output_tokens || 0,
-              totalTokens: response.usage_metadata.total_tokens || 0,
+              promptTokens: response.response_metadata.input_tokens || 0,
+              completionTokens: response.response_metadata.output_tokens || 0,
+              totalTokens: response.response_metadata.total_tokens || 0,
             }
           : undefined,
         model: options?.model || 'gpt-4-turbo-preview',
