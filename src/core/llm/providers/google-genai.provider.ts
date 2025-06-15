@@ -57,10 +57,12 @@ export class GoogleGenAIProvider implements LLMProvider, LLMEmbeddingProvider {
   async generateText(prompt: string, options?: LLMGenerationOptions): Promise<LLMGenerationResult> {
     try {
       const response = await this.chatModel.invoke([new HumanMessage(prompt)], {
-        // temperature: options?.temperature,
-        // maxOutputTokens: options?.maxTokens,
-        // topP: options?.topP,
-        // stopSequences: options?.stopSequences,
+        // generationConfig: {
+        //   temperature: options?.temperature,
+        //   maxOutputTokens: options?.maxTokens,
+        //   topP: options?.topP,
+        //   stopSequences: options?.stopSequences,
+        // },
       });
 
       return {
@@ -98,10 +100,12 @@ export class GoogleGenAIProvider implements LLMProvider, LLMEmbeddingProvider {
       });
 
       const response = await this.chatModel.invoke(langchainMessages, {
-        // temperature: options?.temperature,
-        // maxOutputTokens: options?.maxTokens,
-        // topP: options?.topP,
-        // stopSequences: options?.stopSequences,
+        // generationConfig: {
+        //   temperature: options?.temperature,
+        //   maxOutputTokens: options?.maxTokens,
+        //   topP: options?.topP,
+        //   stopSequences: options?.stopSequences,
+        // },
       });
 
       return {
