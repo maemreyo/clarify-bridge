@@ -1,8 +1,32 @@
-/**
- * JWT Authentication Guard
- * 
- * Protects routes that require authentication.
- * Validates JWT tokens and attaches user information to request.
- */
+// Updated: JWT authentication guard
 
-// JWT Auth Guard implementation will be added here
+import { Injectable, ExecutionContext } from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
+import { AuthGuard } from '@nestjs/passport';
+import { Observable } from 'rxjs';
+
+export const IS_PUBLIC_KEY = 'isPublic';
+
+@Injectable()
+export class JwtAuthGuard extends AuthGuard('jwt') {
+  constructor(private reflector: Reflector) {
+    super();
+  }
+
+  canActivate(
+    context: ExecutionContext,
+  ): boolean | Promise<boolean> | Observable<boolean> {
+    const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
+      context.getHandler(),
+      context.getClass(),
+    ]);
+
+    if (isPublic) {
+      return true;
+    }
+
+    return super.canActivate(context);
+  }
+}
+
+// ============================================

@@ -1,125 +1,609 @@
-// src/core/database/prisma.service.ts
-// Updated: Complete Prisma service implementation
+// src/core/auth/dto/auth.dto.ts
+// Updated: Complete authentication DTOs
 
-import { Injectable, OnModuleInit, OnModuleDestroy, Logger } from '@nestjs/common';
-import { PrismaClient } from '@prisma/client';
+import { IsEmail, IsString, MinLength, MaxLength, IsOptional, Matches } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Transform } from 'class-transformer';
+
+export class RegisterUserDto {
+  @ApiProperty({ example: 'john.doe@example.com' })
+  @IsEmail({}, { message: 'Invalid email format' })
+  @Transform(({ value }) => value?.toLowerCase().trim())
+  email: string;
+
+  @ApiProperty({ example: 'John Doe' })
+  @IsString()
+  @MinLength(2)
+  @MaxLength(100)
+  @Transform(({ value }) => value?.trim())
+  name: string;
+
+  @ApiProperty({ example: 'SecurePass123!', minLength: 8 })
+  @IsString()
+  @MinLength(8, { message: 'Password must be at least 8 characters long' })
+  @MaxLength(50)
+  @Matches(
+    /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/,
+    {
+      message: 'Password must contain uppercase, lowercase, number and special character',
+    },
+  )
+  password: string;
+}
+
+export class LoginUserDto {
+  @ApiProperty({ example: 'john.doe@example.com' })
+  @IsEmail({}, { message: 'Invalid email format' })
+  @Transform(({ value }) => value?.toLowerCase().trim())
+  email: string;
+
+  @ApiProperty({ example: 'SecurePass123!' })
+  @IsString()
+  password: string;
+}
+
+export class ResetPasswordDto {
+  @ApiProperty()
+  @IsString()
+  token: string;
+
+  @ApiProperty({ example: 'NewSecurePass123!' })
+  @IsString()
+  @MinLength(8)
+  @MaxLength(50)
+  @Matches(
+    /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/,
+    {
+      message: 'Password must contain uppercase, lowercase, number and special character',
+    },
+  )
+  newPassword: string;
+}
+
+export class ForgotPasswordDto {
+  @ApiProperty({ example: 'john.doe@example.com' })
+  @IsEmail({}, { message: 'Invalid email format' })
+  @Transform(({ value }) => value?.toLowerCase().trim())
+  email: string;
+}
+
+export class RefreshTokenDto {
+  @ApiProperty()
+  @IsString()
+  refreshToken: string;
+}
+
+export class TokenResponseDto {
+  @ApiProperty()
+  accessToken: string;
+
+  @ApiProperty()
+  refreshToken: string;
+
+  @ApiProperty({ example: 'Bearer' })
+  tokenType: string = 'Bearer';
+
+  @ApiProperty({ example: 86400, description: 'Token expiry in seconds' })
+  expiresIn: number;
+
+  @ApiPropertyOptional()
+  user?: {
+    id: string;
+    email: string;
+    name: string;
+    avatar?: string;
+    subscriptionTier: string;
+  };
+}
+
+export class UpdateProfileDto {
+  @ApiPropertyOptional({ example: 'John Doe' })
+  @IsOptional()
+  @IsString()
+  @MinLength(2)
+  @MaxLength(100)
+  @Transform(({ value }) => value?.trim())
+  name?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  avatar?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  preferences?: Record<string, any>;
+}
+
+// ============================================
+
+// src/core/auth/strategies/jwt.strategy.ts
+// Updated: JWT authentication strategy
+
+import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { PassportStrategy } from '@nestjs/passport';
+import { ExtractJwt, Strategy } from 'passport-jwt';
 import { ConfigService } from '@nestjs/config';
+import { PrismaService } from '@core/database';
+
+export interface JwtPayload {
+  sub: string; // user id
+  email: string;
+  iat?: number;
+  exp?: number;
+}
 
 @Injectable()
-export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
-  private readonly logger = new Logger(PrismaService.name);
-
-  constructor(private configService: ConfigService) {
-    const logLevel = configService.get('NODE_ENV') === 'production' ? 'error' : 'query';
-
+export class JwtStrategy extends PassportStrategy(Strategy) {
+  constructor(
+    private configService: ConfigService,
+    private prisma: PrismaService,
+  ) {
     super({
-      log: [
-        { emit: 'event', level: 'query' },
-        { emit: 'event', level: 'error' },
-        { emit: 'event', level: 'info' },
-        { emit: 'event', level: 'warn' },
-      ],
-      errorFormat: 'minimal',
+      jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+      ignoreExpiration: false,
+      secretOrKey: configService.get<string>('JWT_SECRET'),
+    });
+  }
+
+  async validate(payload: JwtPayload) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: payload.sub },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        avatar: true,
+        subscriptionTier: true,
+        teamMemberships: {
+          include: {
+            team: true,
+          },
+        },
+      },
     });
 
-    // Log database queries in development
-    if (configService.get('NODE_ENV') !== 'production') {
-      this.$on('query' as any, (e: any) => {
-        this.logger.debug(`Query: ${e.query}`);
-        this.logger.debug(`Duration: ${e.duration}ms`);
-      });
-    }
-  }
-
-  async onModuleInit() {
-    try {
-      await this.$connect();
-      this.logger.log('Successfully connected to database');
-    } catch (error) {
-      this.logger.error('Failed to connect to database', error);
-      throw error;
-    }
-  }
-
-  async onModuleDestroy() {
-    await this.$disconnect();
-    this.logger.log('Disconnected from database');
-  }
-
-  /**
-   * Execute a transaction with automatic rollback on error
-   */
-  async executeTransaction<T>(fn: (prisma: PrismaClient) => Promise<T>): Promise<T> {
-    try {
-      return await this.$transaction(fn);
-    } catch (error) {
-      this.logger.error('Transaction failed', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Clear all data (useful for testing)
-   */
-  async clearDatabase() {
-    if (this.configService.get('NODE_ENV') === 'production') {
-      throw new Error('Cannot clear database in production');
+    if (!user) {
+      throw new UnauthorizedException('User not found');
     }
 
-    const models = Reflect.ownKeys(this).filter(
-      (key) => key[0] !== '_' && key[0] !== '$' && typeof key === 'string'
-    ) as string[];
-
-    return Promise.all(
-      models.map((model) => {
-        if (this[model]?.deleteMany) {
-          return this[model].deleteMany();
-        }
-      })
-    );
-  }
-
-  /**
-   * Health check for database connection
-   */
-  async healthCheck(): Promise<boolean> {
-    try {
-      await this.$queryRaw`SELECT 1`;
-      return true;
-    } catch (error) {
-      this.logger.error('Database health check failed', error);
-      return false;
-    }
+    return user;
   }
 }
 
 // ============================================
 
-// src/core/database/database.module.ts
-// Updated: Complete Database module implementation
+// src/core/auth/guards/jwt-auth.guard.ts
+// Updated: JWT authentication guard
 
-import { Module, Global } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
-import { PrismaService } from './prisma.service';
+import { Injectable, ExecutionContext } from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
+import { AuthGuard } from '@nestjs/passport';
+import { Observable } from 'rxjs';
 
-/**
- * Global database module that provides PrismaService to all modules
- *
- * @Global decorator makes this module available throughout the application
- * without needing to import it in every module
- */
-@Global()
-@Module({
-  imports: [ConfigModule],
-  providers: [PrismaService],
-  exports: [PrismaService],
-})
-export class DatabaseModule {}
+export const IS_PUBLIC_KEY = 'isPublic';
+
+@Injectable()
+export class JwtAuthGuard extends AuthGuard('jwt') {
+  constructor(private reflector: Reflector) {
+    super();
+  }
+
+  canActivate(
+    context: ExecutionContext,
+  ): boolean | Promise<boolean> | Observable<boolean> {
+    const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
+      context.getHandler(),
+      context.getClass(),
+    ]);
+
+    if (isPublic) {
+      return true;
+    }
+
+    return super.canActivate(context);
+  }
+}
 
 // ============================================
 
-// src/core/database/index.ts
-// Updated: Barrel export for database module
+// src/core/auth/decorators/public.decorator.ts
+// Updated: Public route decorator
 
-export * from './database.module';
-export * from './prisma.service';
+import { SetMetadata } from '@nestjs/common';
+import { IS_PUBLIC_KEY } from '../guards/jwt-auth.guard';
+
+export const Public = () => SetMetadata(IS_PUBLIC_KEY, true);
+
+// ============================================
+
+// src/core/auth/decorators/current-user.decorator.ts
+// Updated: Current user decorator
+
+import { createParamDecorator, ExecutionContext } from '@nestjs/common';
+
+export const CurrentUser = createParamDecorator(
+  (data: string | undefined, ctx: ExecutionContext) => {
+    const request = ctx.switchToHttp().getRequest();
+    const user = request.user;
+
+    return data ? user?.[data] : user;
+  },
+);
+
+// ============================================
+
+// src/core/auth/auth.service.ts
+// Updated: Complete authentication service
+
+import {
+  Injectable,
+  UnauthorizedException,
+  ConflictException,
+  BadRequestException,
+  Logger,
+} from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
+import * as bcrypt from 'bcrypt';
+import { PrismaService } from '@core/database';
+import {
+  RegisterUserDto,
+  LoginUserDto,
+  TokenResponseDto,
+  UpdateProfileDto,
+} from './dto/auth.dto';
+import { JwtPayload } from './strategies/jwt.strategy';
+import { User } from '@prisma/client';
+
+@Injectable()
+export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+  private readonly jwtExpiresIn: number;
+  private readonly refreshExpiresIn: number;
+
+  constructor(
+    private prisma: PrismaService,
+    private jwtService: JwtService,
+    private configService: ConfigService,
+  ) {
+    this.jwtExpiresIn = this.configService.get<number>('JWT_EXPIRATION', 86400); // 1 day
+    this.refreshExpiresIn = this.configService.get<number>('JWT_REFRESH_EXPIRATION', 604800); // 7 days
+  }
+
+  async register(dto: RegisterUserDto): Promise<TokenResponseDto> {
+    // Check if user already exists
+    const existingUser = await this.prisma.user.findUnique({
+      where: { email: dto.email },
+    });
+
+    if (existingUser) {
+      throw new ConflictException('User with this email already exists');
+    }
+
+    // Hash password
+    const hashedPassword = await this.hashPassword(dto.password);
+
+    // Create user
+    const user = await this.prisma.user.create({
+      data: {
+        email: dto.email,
+        name: dto.name,
+        password: hashedPassword,
+      },
+    });
+
+    this.logger.log(`New user registered: ${user.email}`);
+
+    // Generate tokens
+    return this.generateTokens(user);
+  }
+
+  async login(dto: LoginUserDto): Promise<TokenResponseDto> {
+    const user = await this.validateUser(dto.email, dto.password);
+
+    if (!user) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
+
+    this.logger.log(`User logged in: ${user.email}`);
+
+    return this.generateTokens(user);
+  }
+
+  async validateUser(email: string, password: string): Promise<User | null> {
+    const user = await this.prisma.user.findUnique({
+      where: { email },
+    });
+
+    if (!user) {
+      return null;
+    }
+
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+
+    if (!isPasswordValid) {
+      return null;
+    }
+
+    return user;
+  }
+
+  async refreshToken(refreshToken: string): Promise<TokenResponseDto> {
+    try {
+      const payload = this.jwtService.verify<JwtPayload>(refreshToken, {
+        secret: this.configService.get<string>('JWT_SECRET'),
+      });
+
+      const user = await this.prisma.user.findUnique({
+        where: { id: payload.sub },
+      });
+
+      if (!user) {
+        throw new UnauthorizedException('User not found');
+      }
+
+      return this.generateTokens(user);
+    } catch (error) {
+      throw new UnauthorizedException('Invalid refresh token');
+    }
+  }
+
+  async updateProfile(userId: string, dto: UpdateProfileDto): Promise<User> {
+    const user = await this.prisma.user.update({
+      where: { id: userId },
+      data: dto,
+    });
+
+    this.logger.log(`User profile updated: ${user.email}`);
+
+    return user;
+  }
+
+  async changePassword(
+    userId: string,
+    currentPassword: string,
+    newPassword: string,
+  ): Promise<void> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new BadRequestException('User not found');
+    }
+
+    const isPasswordValid = await bcrypt.compare(currentPassword, user.password);
+
+    if (!isPasswordValid) {
+      throw new BadRequestException('Current password is incorrect');
+    }
+
+    const hashedPassword = await this.hashPassword(newPassword);
+
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { password: hashedPassword },
+    });
+
+    this.logger.log(`Password changed for user: ${user.email}`);
+  }
+
+  async getUserProfile(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        avatar: true,
+        subscriptionTier: true,
+        preferences: true,
+        createdAt: true,
+        teamMemberships: {
+          include: {
+            team: true,
+          },
+        },
+      },
+    });
+
+    if (!user) {
+      throw new BadRequestException('User not found');
+    }
+
+    return user;
+  }
+
+  private async generateTokens(user: User): Promise<TokenResponseDto> {
+    const payload: JwtPayload = {
+      sub: user.id,
+      email: user.email,
+    };
+
+    const accessToken = this.jwtService.sign(payload, {
+      expiresIn: this.jwtExpiresIn,
+    });
+
+    const refreshToken = this.jwtService.sign(payload, {
+      expiresIn: this.refreshExpiresIn,
+    });
+
+    return {
+      accessToken,
+      refreshToken,
+      tokenType: 'Bearer',
+      expiresIn: this.jwtExpiresIn,
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        avatar: user.avatar,
+        subscriptionTier: user.subscriptionTier,
+      },
+    };
+  }
+
+  private async hashPassword(password: string): Promise<string> {
+    const saltRounds = 10;
+    return bcrypt.hash(password, saltRounds);
+  }
+}
+
+// ============================================
+
+// src/core/auth/auth.controller.ts
+// Updated: Authentication controller with all endpoints
+
+import {
+  Controller,
+  Post,
+  Body,
+  Get,
+  Patch,
+  UseGuards,
+  HttpCode,
+  HttpStatus,
+} from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { AuthService } from './auth.service';
+import {
+  RegisterUserDto,
+  LoginUserDto,
+  TokenResponseDto,
+  RefreshTokenDto,
+  UpdateProfileDto,
+} from './dto/auth.dto';
+import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { Public } from './decorators/public.decorator';
+import { CurrentUser } from './decorators/current-user.decorator';
+
+@ApiTags('Authentication')
+@Controller('auth')
+export class AuthController {
+  constructor(private readonly authService: AuthService) {}
+
+  @Public()
+  @Post('register')
+  @ApiOperation({ summary: 'Register a new user' })
+  @ApiResponse({ status: 201, description: 'User successfully registered', type: TokenResponseDto })
+  @ApiResponse({ status: 409, description: 'User already exists' })
+  async register(@Body() dto: RegisterUserDto): Promise<TokenResponseDto> {
+    return this.authService.register(dto);
+  }
+
+  @Public()
+  @Post('login')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Login user' })
+  @ApiResponse({ status: 200, description: 'User successfully logged in', type: TokenResponseDto })
+  @ApiResponse({ status: 401, description: 'Invalid credentials' })
+  async login(@Body() dto: LoginUserDto): Promise<TokenResponseDto> {
+    return this.authService.login(dto);
+  }
+
+  @Public()
+  @Post('refresh')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Refresh access token' })
+  @ApiResponse({ status: 200, description: 'Token successfully refreshed', type: TokenResponseDto })
+  @ApiResponse({ status: 401, description: 'Invalid refresh token' })
+  async refreshToken(@Body() dto: RefreshTokenDto): Promise<TokenResponseDto> {
+    return this.authService.refreshToken(dto.refreshToken);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('profile')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get current user profile' })
+  @ApiResponse({ status: 200, description: 'User profile retrieved' })
+  async getProfile(@CurrentUser('id') userId: string) {
+    return this.authService.getUserProfile(userId);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Patch('profile')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Update user profile' })
+  @ApiResponse({ status: 200, description: 'Profile successfully updated' })
+  async updateProfile(
+    @CurrentUser('id') userId: string,
+    @Body() dto: UpdateProfileDto,
+  ) {
+    return this.authService.updateProfile(userId, dto);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('change-password')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Change user password' })
+  @ApiResponse({ status: 204, description: 'Password successfully changed' })
+  async changePassword(
+    @CurrentUser('id') userId: string,
+    @Body() dto: { currentPassword: string; newPassword: string },
+  ) {
+    await this.authService.changePassword(
+      userId,
+      dto.currentPassword,
+      dto.newPassword,
+    );
+  }
+}
+
+// ============================================
+
+// src/core/auth/auth.module.ts
+// Updated: Complete authentication module
+
+import { Module } from '@nestjs/common';
+import { JwtModule } from '@nestjs/jwt';
+import { PassportModule } from '@nestjs/passport';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { AuthService } from './auth.service';
+import { AuthController } from './auth.controller';
+import { JwtStrategy } from './strategies/jwt.strategy';
+import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { APP_GUARD } from '@nestjs/core';
+
+@Module({
+  imports: [
+    PassportModule.register({ defaultStrategy: 'jwt' }),
+    JwtModule.registerAsync({
+      imports: [ConfigModule],
+      useFactory: (configService: ConfigService) => ({
+        secret: configService.get<string>('JWT_SECRET'),
+        signOptions: {
+          expiresIn: configService.get<string>('JWT_EXPIRATION', '1d'),
+        },
+      }),
+      inject: [ConfigService],
+    }),
+  ],
+  controllers: [AuthController],
+  providers: [
+    AuthService,
+    JwtStrategy,
+    // Make JwtAuthGuard global - all routes protected by default
+    {
+      provide: APP_GUARD,
+      useClass: JwtAuthGuard,
+    },
+  ],
+  exports: [AuthService, JwtModule],
+})
+export class AuthModule {}
+
+// ============================================
+
+// src/core/auth/index.ts
+// Updated: Barrel export for auth module
+
+export * from './auth.module';
+export * from './auth.service';
+export * from './auth.controller';
+export * from './dto/auth.dto';
+export * from './guards/jwt-auth.guard';
+export * from './decorators/public.decorator';
+export * from './decorators/current-user.decorator';
+export * from './strategies/jwt.strategy';
