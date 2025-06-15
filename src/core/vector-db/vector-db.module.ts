@@ -1,8 +1,22 @@
-/**
- * Vector Database Module
- * 
- * Manages vector storage and retrieval for semantic search and context enhancement.
- * Supports multiple vector database providers.
- */
+// Updated: Vector database module configuration
 
-// Vector DB module implementation will be added here
+import { Module, Global } from '@nestjs/common';
+import { VectorDbService } from './vector-db.service';
+import { PineconeProvider } from './providers/pinecone.provider';
+import { MemoryVectorProvider } from './providers/memory.provider';
+
+/**
+ * Global vector database module for semantic search and memory
+ */
+@Global()
+@Module({
+  providers: [
+    VectorDbService,
+    PineconeProvider,
+    MemoryVectorProvider,
+  ],
+  exports: [VectorDbService],
+})
+export class VectorDbModule {}
+
+// ============================================
