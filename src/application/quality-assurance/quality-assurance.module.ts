@@ -1,8 +1,22 @@
-/**
- * Quality Assurance Module
- * 
- * Validates and improves the quality of generated specifications.
- * Performs consistency checks and completeness validation.
- */
+// Updated: Quality assurance module configuration
 
-// Quality Assurance module implementation will be added here
+import { Module } from '@nestjs/common';
+import { QualityAssuranceService } from './quality-assurance.service';
+import { PmViewValidator } from './validators/pm-view.validator';
+import { FrontendViewValidator } from './validators/frontend-view.validator';
+import { BackendViewValidator } from './validators/backend-view.validator';
+import { CrossViewValidator } from './validators/cross-view.validator';
+
+@Module({
+  providers: [
+    QualityAssuranceService,
+    PmViewValidator,
+    FrontendViewValidator,
+    BackendViewValidator,
+    CrossViewValidator,
+  ],
+  exports: [QualityAssuranceService],
+})
+export class QualityAssuranceModule {}
+
+// ============================================

@@ -1,8 +1,14 @@
-/**
- * Collaboration Module
- * 
- * Enables real-time collaboration on specifications.
- * Manages comments, approvals, and change tracking.
- */
+// Updated: Collaboration module configuration
 
-// Collaboration module implementation will be added here
+import { Module } from '@nestjs/common';
+import { CollaborationService } from './collaboration.service';
+import { CollaborationController, UserReviewController } from './collaboration.controller';
+
+@Module({
+  controllers: [CollaborationController, UserReviewController],
+  providers: [CollaborationService],
+  exports: [CollaborationService],
+})
+export class CollaborationModule {}
+
+// ============================================

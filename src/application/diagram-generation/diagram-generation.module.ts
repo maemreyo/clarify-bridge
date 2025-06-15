@@ -1,8 +1,20 @@
-/**
- * Diagram Generation Module
- * 
- * Converts natural language descriptions into Mermaid.js diagrams.
- * Creates wireframes, flowcharts, and sequence diagrams.
- */
+// Updated: Diagram generation module configuration
 
-// Diagram Generation module implementation will be added here
+import { Module } from '@nestjs/common';
+import { DiagramGenerationService } from './diagram-generation.service';
+import { FlowchartGenerator } from './generators/flowchart.generator';
+import { SequenceGenerator } from './generators/sequence.generator';
+import { EntityRelationshipGenerator } from './generators/entity-relationship.generator';
+
+@Module({
+  providers: [
+    DiagramGenerationService,
+    FlowchartGenerator,
+    SequenceGenerator,
+    EntityRelationshipGenerator,
+  ],
+  exports: [DiagramGenerationService],
+})
+export class DiagramGenerationModule {}
+
+// ============================================
