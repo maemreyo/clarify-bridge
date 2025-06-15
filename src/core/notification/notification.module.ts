@@ -1,8 +1,22 @@
-/**
- * Notification Module
- * 
- * Provides a unified interface for sending notifications across multiple channels.
- * Supports email, in-app notifications, and third-party integrations.
- */
+// Updated: Notification module configuration
 
-// Notification module implementation will be added here
+import { Module, Global } from '@nestjs/common';
+import { NotificationService } from './notification.service';
+import { EmailProvider } from './providers/email.provider';
+import { SlackProvider } from './providers/slack.provider';
+
+/**
+ * Global notification module for multi-channel notifications
+ */
+@Global()
+@Module({
+  providers: [
+    NotificationService,
+    EmailProvider,
+    SlackProvider,
+  ],
+  exports: [NotificationService],
+})
+export class NotificationModule {}
+
+// ============================================
