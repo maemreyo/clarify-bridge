@@ -1,8 +1,19 @@
-/**
- * Usage Module
- * 
- * Tracks and enforces usage limits based on subscription plans.
- * Monitors API calls, AI generations, and other metered features.
- */
+// Updated: Usage tracking module configuration
 
-// Usage module implementation will be added here
+import { Module, Global } from '@nestjs/common';
+import { UsageService } from './usage.service';
+import { UsageController } from './usage.controller';
+import { UsageGuard } from './guards/usage.guard';
+
+/**
+ * Global usage tracking and quota management module
+ */
+@Global()
+@Module({
+  controllers: [UsageController],
+  providers: [UsageService, UsageGuard],
+  exports: [UsageService, UsageGuard],
+})
+export class UsageModule {}
+
+// ============================================
