@@ -1,5 +1,5 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
+// prisma/schema.prisma
+// Updated: Complete schema implementation for The Clarity Bridge
 
 generator client {
   provider = "prisma-client-js"
@@ -10,4 +10,311 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// Schema models will be defined here
+// ==================== USER & AUTHENTICATION ====================
+
+model User {
+  id               String           @id @default(cuid())
+  email            String           @unique
+  name             String?
+  avatar           String?
+  password         String
+
+  // Team relationships
+  teamMemberships  TeamMember[]
+  ownedTeams       Team[]           @relation("TeamOwner")
+
+  // Individual usage
+  specifications   Specification[]
+  comments         Comment[]
+  reviews          Review[]
+
+  // Subscription info
+  subscription     Subscription?
+  subscriptionTier SubscriptionTier @default(FREE)
+  generationsCount Int              @default(0)
+  lastResetDate    DateTime         @default(now())
+
+  // Preferences
+  preferences      Json?            // UI preferences, notification settings
+
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+}
+
+// ==================== TEAM & COLLABORATION ====================
+
+model Team {
+  id            String           @id @default(cuid())
+  name          String
+  slug          String           @unique
+  description   String?
+  avatar        String?
+
+  ownerId       String
+  owner         User             @relation("TeamOwner", fields: [ownerId], references: [id])
+
+  members       TeamMember[]
+  specifications Specification[]
+
+  // Team settings
+  settings      Json?            // Approval workflows, integrations config
+
+  // Usage tracking
+  usageQuota    Int              @default(50)
+  usageCount    Int              @default(0)
+
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+}
+
+model TeamMember {
+  id       String   @id @default(cuid())
+  role     TeamRole @default(MEMBER)
+
+  userId   String
+  user     User     @relation(fields: [userId], references: [id])
+
+  teamId   String
+  team     Team     @relation(fields: [teamId], references: [id])
+
+  joinedAt DateTime @default(now())
+
+  @@unique([userId, teamId])
+}
+
+enum TeamRole {
+  OWNER
+  ADMIN
+  MEMBER
+  VIEWER
+}
+
+// ==================== SPECIFICATIONS ====================
+
+model Specification {
+  id          String                 @id @default(cuid())
+  title       String
+  description String?
+  status      SpecificationStatus    @default(DRAFT)
+  priority    Priority               @default(MEDIUM)
+
+  // Ownership
+  authorId    String
+  author      User                   @relation(fields: [authorId], references: [id])
+  teamId      String?
+  team        Team?                  @relation(fields: [teamId], references: [id])
+
+  // Collaboration
+  versions    SpecificationVersion[]
+  comments    Comment[]
+  reviews     Review[]
+
+  // Quality metrics
+  qualityScore Float?
+  lastReviewedAt DateTime?
+
+  // External integrations
+  externalLinks Json?                // Jira tickets, Linear issues, etc.
+
+  createdAt   DateTime               @default(now())
+  updatedAt   DateTime               @updatedAt
+}
+
+enum SpecificationStatus {
+  DRAFT
+  IN_REVIEW
+  APPROVED
+  REJECTED
+  ARCHIVED
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+model SpecificationVersion {
+  id              String   @id @default(cuid())
+  version         Int
+
+  // AI-generated content
+  pmView          Json
+  frontendView    Json
+  backendView     Json
+  diagramSyntax   String?  @db.Text
+
+  // Quality metrics
+  aiConfidenceScore Float?
+  validationResults Json?   // Results from QA checks
+
+  // Change tracking
+  changesSummary  String?
+  previousVersionId String?
+
+  specificationId String
+  specification   Specification @relation(fields: [specificationId], references: [id], onDelete: Cascade)
+
+  createdAt       DateTime      @default(now())
+}
+
+// ==================== COLLABORATION ====================
+
+model Comment {
+  id            String    @id @default(cuid())
+  content       String    @db.Text
+  section       String?   // Which part of spec: "pm_view", "frontend_view", etc.
+  resolved      Boolean   @default(false)
+
+  authorId      String
+  author        User      @relation(fields: [authorId], references: [id])
+
+  specificationId String
+  specification   Specification @relation(fields: [specificationId], references: [id], onDelete: Cascade)
+
+  // Threading
+  parentId      String?
+  parent        Comment?  @relation("CommentThread", fields: [parentId], references: [id])
+  replies       Comment[] @relation("CommentThread")
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model Review {
+  id            String       @id @default(cuid())
+  status        ReviewStatus @default(PENDING)
+  feedback      String?      @db.Text
+
+  reviewerId    String
+  reviewer      User         @relation(fields: [reviewerId], references: [id])
+
+  specificationId String
+  specification   Specification @relation(fields: [specificationId], references: [id], onDelete: Cascade)
+
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+}
+
+enum ReviewStatus {
+  PENDING
+  APPROVED
+  CHANGES_REQUESTED
+  REJECTED
+}
+
+// ==================== SUBSCRIPTIONS & BILLING ====================
+
+model Subscription {
+  id             String           @id @default(cuid())
+  userId         String           @unique
+  user           User             @relation(fields: [userId], references: [id])
+
+  tier           SubscriptionTier
+  status         SubscriptionStatus @default(ACTIVE)
+
+  // Stripe data
+  stripeCustomerId     String?   @unique
+  stripeSubscriptionId String?   @unique
+
+  // Billing period
+  currentPeriodStart DateTime
+  currentPeriodEnd   DateTime
+
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+}
+
+enum SubscriptionTier {
+  FREE
+  STARTER
+  PROFESSIONAL
+  ENTERPRISE
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  CANCELLED
+  PAST_DUE
+  UNPAID
+}
+
+// ==================== ANALYTICS & MONITORING ====================
+
+model AnalyticsEvent {
+  id          String   @id @default(cuid())
+  eventType   String   // "spec_generated", "user_satisfaction", etc.
+  eventData   Json
+  userId      String?
+  teamId      String?
+
+  createdAt   DateTime @default(now())
+
+  @@index([eventType, createdAt])
+  @@index([userId, createdAt])
+  @@index([teamId, createdAt])
+}
+
+model QualityMetrics {
+  id                String   @id @default(cuid())
+  specificationId   String
+
+  // AI Quality Scores
+  aiSelfScore       Float?
+  consistencyScore  Float?
+  completenessScore Float?
+
+  // User Feedback
+  userSatisfaction  Int?     // 1-5 rating
+  userFeedback      String?
+
+  // Performance Metrics
+  generationTime    Int?     // milliseconds
+
+  createdAt         DateTime @default(now())
+
+  @@index([specificationId])
+}
+
+// ==================== USAGE TRACKING ====================
+
+model UsageLog {
+  id        String    @id @default(cuid())
+  userId    String?
+  teamId    String?
+  action    String    // "spec_generated", "view_generated", etc.
+  metadata  Json?
+
+  createdAt DateTime  @default(now())
+
+  @@index([userId, createdAt])
+  @@index([teamId, createdAt])
+  @@index([action, createdAt])
+}
+
+// ==================== NOTIFICATIONS ====================
+
+model Notification {
+  id          String            @id @default(cuid())
+  userId      String
+  type        NotificationType
+  title       String
+  content     String?
+  metadata    Json?
+  read        Boolean           @default(false)
+
+  createdAt   DateTime          @default(now())
+
+  @@index([userId, read, createdAt])
+}
+
+enum NotificationType {
+  SPEC_COMPLETED
+  COMMENT_ADDED
+  REVIEW_REQUESTED
+  REVIEW_COMPLETED
+  TEAM_INVITATION
+  SUBSCRIPTION_UPDATE
+  SYSTEM_ALERT
+}

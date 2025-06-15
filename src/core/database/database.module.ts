@@ -1,8 +1,21 @@
-/**
- * Database Module
- * 
- * Provides a centralized Prisma client instance for database operations.
- * Manages database connections and transaction handling.
- */
+// Updated: Complete Database module implementation
 
-// Database module implementation will be added here
+import { Module, Global } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
+import { PrismaService } from './prisma.service';
+
+/**
+ * Global database module that provides PrismaService to all modules
+ *
+ * @Global decorator makes this module available throughout the application
+ * without needing to import it in every module
+ */
+@Global()
+@Module({
+  imports: [ConfigModule],
+  providers: [PrismaService],
+  exports: [PrismaService],
+})
+export class DatabaseModule {}
+
+// ============================================

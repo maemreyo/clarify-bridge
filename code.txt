@@ -1,3 +1,4 @@
+// src/core/database/prisma.service.ts
 // Updated: Complete Prisma service implementation
 
 import { Injectable, OnModuleInit, OnModuleDestroy, Logger } from '@nestjs/common';
@@ -93,3 +94,32 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
 }
 
 // ============================================
+
+// src/core/database/database.module.ts
+// Updated: Complete Database module implementation
+
+import { Module, Global } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
+import { PrismaService } from './prisma.service';
+
+/**
+ * Global database module that provides PrismaService to all modules
+ *
+ * @Global decorator makes this module available throughout the application
+ * without needing to import it in every module
+ */
+@Global()
+@Module({
+  imports: [ConfigModule],
+  providers: [PrismaService],
+  exports: [PrismaService],
+})
+export class DatabaseModule {}
+
+// ============================================
+
+// src/core/database/index.ts
+// Updated: Barrel export for database module
+
+export * from './database.module';
+export * from './prisma.service';
