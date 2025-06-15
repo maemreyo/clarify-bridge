@@ -89,14 +89,24 @@ Triển khai theo thứ tự: Core Services → Application Layer → Gateway La
   - [x] decorators/track-performance.decorator.ts
   - [x] index.ts (barrel export)
 
-### 🚧 In Progress
-- [ ] SpecificationModule (Core Business)
-  - [ ] specification.module.ts
-  - [ ] specification.service.ts
-  - [ ] specification.controller.ts
-  - [ ] dto/specification.dto.ts
+## Application Layer (Business Logic) - In Progress
 
-## Application Layer (Business Logic) - Starting Implementation
+- [x] SpecificationModule (Core Business)
+  - [x] specification.module.ts
+  - [x] specification.service.ts
+  - [x] specification.controller.ts
+  - [x] dto/specification.dto.ts
+  - [x] interfaces/specification.interface.ts
+  - [x] index.ts (barrel export)
+
+### 🚧 In Progress
+- [x] ContextIngestionModule
+  - [x] context-ingestion.module.ts
+  - [x] context-ingestion.service.ts
+  - [x] processors/text-processor.ts
+  - [x] processors/image-processor.ts
+  - [x] interfaces/context-ingestion.interface.ts
+  - [x] index.ts (barrel export)
 
 ### 📋 TODO - Core Services (Theo thứ tự ưu tiên)
 

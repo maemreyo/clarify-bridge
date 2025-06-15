@@ -1,8 +1,18 @@
-/**
- * Context Ingestion Module
- * 
- * Processes unstructured inputs to extract and summarize context.
- * Handles text analysis and context storage.
- */
+// Updated: Context ingestion module configuration
 
-// Context Ingestion module implementation will be added here
+import { Module } from '@nestjs/common';
+import { ContextIngestionService } from './context-ingestion.service';
+import { TextProcessor } from './processors/text-processor';
+import { ImageProcessor } from './processors/image-processor';
+
+@Module({
+  providers: [
+    ContextIngestionService,
+    TextProcessor,
+    ImageProcessor,
+  ],
+  exports: [ContextIngestionService],
+})
+export class ContextIngestionModule {}
+
+// ============================================
