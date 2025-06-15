@@ -1,8 +1,15 @@
-/**
- * Team Module
- * 
- * Manages teams, roles, permissions, and workspace collaboration.
- * Provides functionality for team creation, invitation, and management.
- */
+// Updated: Team module configuration
 
-// Team module implementation will be added here
+import { Module } from '@nestjs/common';
+import { TeamService } from './team.service';
+import { TeamController } from './team.controller';
+import { TeamMemberGuard } from './guards/team-member.guard';
+
+@Module({
+  controllers: [TeamController],
+  providers: [TeamService, TeamMemberGuard],
+  exports: [TeamService],
+})
+export class TeamModule {}
+
+// ============================================
