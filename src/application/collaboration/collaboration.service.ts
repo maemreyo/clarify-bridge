@@ -23,6 +23,7 @@ import {
   ReviewRequest,
   ReviewDecision,
   CollaborationStats,
+  CollaborationActivity,
 } from './interfaces/collaboration.interface';
 
 @Injectable()
