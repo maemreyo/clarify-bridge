@@ -89,8 +89,9 @@ Triển khai theo thứ tự: Core Services → Application Layer → Gateway La
   - [x] decorators/track-performance.decorator.ts
   - [x] index.ts (barrel export)
 
-## Application Layer (Business Logic) - In Progress
+## Application Layer (Business Logic)
 
+### ✅ Completed
 - [x] SpecificationModule (Core Business)
   - [x] specification.module.ts
   - [x] specification.service.ts
@@ -98,8 +99,6 @@ Triển khai theo thứ tự: Core Services → Application Layer → Gateway La
   - [x] dto/specification.dto.ts
   - [x] interfaces/specification.interface.ts
   - [x] index.ts (barrel export)
-
-### 🚧 In Progress
 - [x] ContextIngestionModule
   - [x] context-ingestion.module.ts
   - [x] context-ingestion.service.ts
@@ -107,105 +106,54 @@ Triển khai theo thứ tự: Core Services → Application Layer → Gateway La
   - [x] processors/image-processor.ts
   - [x] interfaces/context-ingestion.interface.ts
   - [x] index.ts (barrel export)
+- [x] MultiViewGenerationModule
+  - [x] multi-view-generation.module.ts
+  - [x] multi-view-generation.service.ts
+  - [x] generators/pm-view.generator.ts
+  - [x] generators/frontend-view.generator.ts
+  - [x] generators/backend-view.generator.ts
+  - [x] interfaces/view-generation.interface.ts
+  - [x] index.ts (barrel export)
+- [x] DiagramGenerationModule
+  - [x] diagram-generation.module.ts
+  - [x] diagram-generation.service.ts
+  - [x] generators/entity-relationship.generator.ts
+  - [x] generators/flowchart.generator.ts
+  - [x] generators/sequence.generator.ts
+  - [x] interfaces/diagram-generation.interface.ts
+  - [x] index.ts (barrel export)
+- [x] QualityAssuranceModule
+  - [x] quality-assurance.module.ts
+  - [x] quality-assurance.service.ts
+  - [x] validators/pm-view.validator.ts
+  - [x] validators/frontend-view.validator.ts
+  - [x] validators/backend-view.validator.ts
+  - [x] validators/cross-view.validator.ts
+  - [x] interfaces/quality-assurance.interface.ts
+  - [x] index.ts (barrel export)
+- [x] CollaborationModule
+  - [x] collaboration.module.ts
+  - [x] collaboration.service.ts
+  - [x] collaboration.controller.ts
+  - [x] dto/collaboration.dto.ts
+  - [x] interfaces/collaboration.interface.ts
+  - [x] index.ts (barrel export)
 
-### 📋 TODO - Core Services (Theo thứ tự ưu tiên)
+### 🚧 In Progress
 
-1. **DatabaseModule** (Foundation cho tất cả)
-   - [ ] database.module.ts
-   - [ ] prisma.service.ts
+## Gateway Layer (Entry Points)
 
-2. **AuthModule** (Security cơ bản)
-   - [ ] auth.module.ts
-   - [ ] auth.service.ts
-   - [ ] auth.controller.ts
-   - [ ] dto/auth.dto.ts
-   - [ ] strategies/jwt.strategy.ts
-   - [ ] guards/jwt-auth.guard.ts
-
-3. **LlmCoreModule** (AI Foundation)
-   - [ ] llm-core.module.ts
-   - [ ] llm-core.service.ts
-   - [ ] interfaces/llm-provider.interface.ts
-   - [ ] providers/openai.provider.ts
-   - [ ] providers/google-genai.provider.ts
-   - [ ] providers/anthropic.provider.ts
-
-4. **JobQueueModule** (Async Processing)
-   - [ ] job-queue.module.ts
-   - [ ] job-queue.service.ts
-   - [ ] processors/specification.processor.ts
-
-5. **TeamModule** (Team Management)
-   - [ ] team.module.ts
-   - [ ] team.service.ts
-   - [ ] team.controller.ts
-   - [ ] dto/team.dto.ts
-
-6. **NotificationModule** (Communication)
-   - [ ] notification.module.ts
-   - [ ] notification.service.ts
-   - [ ] providers/email.provider.ts
-
-7. **VectorDBModule** (Memory & Search)
-   - [ ] vector-db.module.ts
-   - [ ] vector-db.service.ts
-   - [ ] providers/pinecone.provider.ts
-
-8. **UsageModule** (Quota Management)
-   - [ ] usage.module.ts
-   - [ ] usage.service.ts
-   - [ ] guards/usage.guard.ts
-
-9. **PaymentModule** (Billing)
-   - [ ] payment.module.ts
-   - [ ] payment.service.ts
-   - [ ] payment.controller.ts
-
-10. **HealthModule** (Monitoring)
-    - [ ] health.module.ts
-    - [ ] health.controller.ts
-
-11. **MonitoringModule** (Analytics)
-    - [ ] monitoring.module.ts
-    - [ ] monitoring.service.ts
-    - [ ] logger/winston.logger.ts
-
-## Application Layer (Business Logic)
+### 🚧 In Progress
+- [x] WebSocketModule
+  - [x] websocket.module.ts
+  - [x] websocket.gateway.ts
+- [x] WebhookModule
+  - [x] webhook.module.ts
+  - [x] webhook.controller.ts
 
 ### 📋 TODO - Application Services
 
-1. **SpecificationModule** (Core Business)
-   - [ ] specification.module.ts
-   - [ ] specification.service.ts
-   - [ ] specification.controller.ts
-   - [ ] dto/specification.dto.ts
-
-2. **ContextIngestionModule**
-   - [ ] context-ingestion.module.ts
-   - [ ] context-ingestion.service.ts
-   - [ ] processors/text-processor.ts
-   - [ ] processors/image-processor.ts
-
-3. **MultiViewGenerationModule**
-   - [ ] multi-view-generation.module.ts
-   - [ ] multi-view-generation.service.ts
-   - [ ] generators/pm-view.generator.ts
-   - [ ] generators/frontend-view.generator.ts
-   - [ ] generators/backend-view.generator.ts
-
-4. **DiagramGenerationModule**
-   - [ ] diagram-generation.module.ts
-   - [ ] diagram-generation.service.ts
-
-5. **QualityAssuranceModule**
-   - [ ] quality-assurance.module.ts
-   - [ ] quality-assurance.service.ts
-
-6. **CollaborationModule**
-   - [ ] collaboration.module.ts
-   - [ ] collaboration.service.ts
-
-7. **IntegrationModule**
+1. **IntegrationModule**
    - [ ] integration.module.ts
    - [ ] integration.service.ts
 
@@ -215,14 +163,6 @@ Triển khai theo thứ tự: Core Services → Application Layer → Gateway La
 
 1. **ApiGatewayModule**
    - [ ] api-gateway.module.ts
-
-2. **WebSocketModule**
-   - [ ] websocket.module.ts
-   - [ ] websocket.gateway.ts
-
-3. **WebhookModule**
-   - [ ] webhook.module.ts
-   - [ ] webhook.controller.ts
 
 ## Root Files
 
