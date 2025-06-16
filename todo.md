@@ -23,25 +23,25 @@
 
 - [ ] **DatabaseModule Tests**
   - [ ] prisma.service.spec.ts - Test database connection and operations
-- [ ] **AuthModule Tests**
-  - [ ] auth.service.spec.ts - Test authentication logic
-  - [ ] auth.controller.spec.ts - Test auth endpoints
-  - [ ] jwt.strategy.spec.ts - Test JWT strategy
-  - [ ] jwt-auth.guard.spec.ts - Test auth guard behavior
-- [ ] **LlmCoreModule Tests**
-  - [ ] llm-core.service.spec.ts - Test AI provider abstraction
+- [x] **AuthModule Tests** ✅
+  - [x] auth.service.spec.ts - Test authentication logic ✅
+  - [x] auth.controller.spec.ts - Test auth endpoints ✅
+  - [x] jwt.strategy.spec.ts - Test JWT strategy ✅
+  - [x] jwt-auth.guard.spec.ts - Test auth guard behavior ✅
+- [x] **LlmCoreModule Tests** ✅
+  - [x] llm-core.service.spec.ts - Test AI provider abstraction ✅
   - [ ] openai.provider.spec.ts - Test OpenAI provider
   - [ ] google-genai.provider.spec.ts - Test Google provider
   - [ ] anthropic.provider.spec.ts - Test Anthropic provider
-- [ ] **JobQueueModule Tests**
-  - [ ] job-queue.service.spec.ts - Test queue operations
+- [x] **JobQueueModule Tests** ✅
+  - [x] job-queue.service.spec.ts - Test queue operations ✅
   - [ ] specification.processor.spec.ts - Test job processing
-- [ ] **TeamModule Tests**
-  - [ ] team.service.spec.ts - Test team management
+- [x] **TeamModule Tests** ✅
+  - [x] team.service.spec.ts - Test team management ✅
   - [ ] team.controller.spec.ts - Test team endpoints
   - [ ] team-member.guard.spec.ts - Test team access control
-- [ ] **NotificationModule Tests**
-  - [ ] notification.service.spec.ts - Test notification logic
+- [x] **NotificationModule Tests** ✅
+  - [x] notification.service.spec.ts - Test notification logic ✅
   - [ ] email.provider.spec.ts - Test email sending
   - [ ] slack.provider.spec.ts - Test Slack integration
 - [ ] **VectorDBModule Tests**
@@ -67,8 +67,8 @@
 
 #### Application Layer Tests
 
-- [ ] **SpecificationModule Tests**
-  - [ ] specification.service.spec.ts - Test spec generation
+- [x] **SpecificationModule Tests** (Partial ✅)
+  - [x] specification.service.spec.ts - Test spec generation ✅
   - [ ] specification.controller.spec.ts - Test spec endpoints
 - [ ] **ContextIngestionModule Tests**
   - [ ] context-ingestion.service.spec.ts - Test context processing
@@ -136,6 +136,19 @@ pnpm test --testPathPattern=core/auth
 - **Guards/Middleware**: 85% coverage (security)
 - **Providers**: 75% coverage (external integrations)
 - **Utilities**: 95% coverage (pure functions)
+
+### ✅ Completed Unit Tests (10/50+ files)
+
+- [x] auth.service.spec.ts ✅
+- [x] auth.controller.spec.ts ✅
+- [x] jwt.strategy.spec.ts ✅
+- [x] jwt-auth.guard.spec.ts ✅
+- [x] llm-core.service.spec.ts ✅
+- [x] job-queue.service.spec.ts ✅
+- [x] team.service.spec.ts ✅
+- [x] notification.service.spec.ts ✅
+- [x] specification.service.spec.ts ✅
+- [x] Unit Testing Guide created ✅
 
 ---
 
