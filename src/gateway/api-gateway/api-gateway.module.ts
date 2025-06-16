@@ -27,13 +27,18 @@ import { CompressionMiddleware } from './middleware/compression.middleware';
 @Module({
   imports: [
     // Rate limiting configuration
+
     ThrottlerModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
-        ttl: config.get('RATE_LIMIT_TTL', 60), // 1 minute
-        limit: config.get('RATE_LIMIT_MAX', 100), // 100 requests per minute
-        ignoreUserAgents: [/googlebot/gi, /bingbot/gi], // Allow search engines
+        throttlers: [
+          {
+            ttl: config.get('RATE_LIMIT_TTL', 60) * 1000, // Convert to milliseconds
+            limit: config.get('RATE_LIMIT_MAX', 100),
+          },
+        ],
+        ignoreUserAgents: [/googlebot/gi, /bingbot/gi],
       }),
     }),
   ],

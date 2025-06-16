@@ -1,5 +1,7 @@
 //  Specification interfaces and types
 
+import { QualityIssue, ViewQualityScore } from '../../quality-assurance';
+
 export interface SpecificationContext {
   rawInput: string;
   attachments?: string[];
@@ -97,7 +99,13 @@ export interface QualityCheckResult {
   aiSelfScore: number;
   consistencyScore: number;
   completenessScore: number;
-  issues: string[];
+  detailedScores: {
+    pmView: ViewQualityScore;
+    frontendView: ViewQualityScore;
+    backendView: ViewQualityScore;
+    crossViewConsistency: number;
+  };
+  issues: QualityIssue[];
   suggestions: string[];
   requiresHumanReview: boolean;
 }

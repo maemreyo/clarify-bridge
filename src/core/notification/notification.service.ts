@@ -47,11 +47,11 @@ export class NotificationService {
       // Create in-app notification
       const notification = await this.prisma.notification.create({
         data: {
-          userId,
+          recipientId: userId,
           type,
           title: data.title,
-          content: data.content,
-          metadata: data.metadata,
+          message: data.content || '',
+          data: data.metadata,
         },
       });
 
@@ -209,7 +209,7 @@ export class NotificationService {
       notifications,
       total,
       unreadCount: await this.prisma.notification.count({
-        where: { userId, read: false },
+        where: { recipientId: userId, isRead: false },
       }),
     };
   }
@@ -221,10 +221,12 @@ export class NotificationService {
     const notification = await this.prisma.notification.updateMany({
       where: {
         id: notificationId,
-        userId,
+        recipientId: userId,
+        isRead: false,
       },
       data: {
-        read: true,
+        isRead: true,
+        readAt: new Date(),
       },
     });
 
@@ -241,11 +243,12 @@ export class NotificationService {
   async markAllAsRead(userId: string) {
     const result = await this.prisma.notification.updateMany({
       where: {
-        userId,
-        read: false,
+        recipientId: userId,
+        isRead: false,
       },
       data: {
-        read: true,
+        isRead: true,
+        readAt: new Date(),
       },
     });
 
@@ -264,7 +267,7 @@ export class NotificationService {
         createdAt: {
           lt: cutoffDate,
         },
-        read: true,
+        isRead: true,
       },
     });
 

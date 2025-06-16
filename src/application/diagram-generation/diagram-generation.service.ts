@@ -66,9 +66,7 @@ export class DiagramGenerationService {
       metadata.warnings = validation.warnings;
 
       const duration = Date.now() - startTime;
-      await this.monitoringService.trackAiGeneration('diagram_generation', duration, true, {
-        type: context.type,
-      });
+      await this.monitoringService.trackAiGeneration('diagram_generation', duration, true, {});
 
       return {
         type: context.type,

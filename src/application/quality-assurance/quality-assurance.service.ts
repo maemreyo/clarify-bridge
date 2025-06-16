@@ -47,7 +47,7 @@ export class QualityAssuranceService {
       const aiSelfScore = await this.performAiSelfEvaluation(views);
 
       // Combine all issues
-      const allIssues = [
+      const allIssues: QualityIssue[] = [
         ...pmValidation.issues,
         ...frontendValidation.issues,
         ...backendValidation.issues,
@@ -96,10 +96,7 @@ export class QualityAssuranceService {
 
       // Track metrics
       const duration = Date.now() - startTime;
-      await this.monitoringService.trackAiGeneration('quality_check', duration, true, {
-        overallScore: result.overallScore,
-        requiresReview: requiresHumanReview,
-      });
+      await this.monitoringService.trackAiGeneration('quality_check', duration, true, {});
 
       this.logger.log(
         `Quality check completed for ${specificationId}: score ${result.overallScore}`,

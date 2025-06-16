@@ -8,6 +8,7 @@ export interface ProcessedContext {
     architecture?: string;
     integrations?: string[];
     constraints?: string[];
+    uiComponents?: string[];
   };
   userStories?: string[];
   businessRules?: string[];

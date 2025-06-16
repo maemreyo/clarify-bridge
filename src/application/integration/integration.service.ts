@@ -11,6 +11,7 @@ import {
   IntegrationConfig,
   SyncResult,
   WebhookEvent,
+  IntegrationProvider,
 } from './interfaces/integration.interface';
 import {
   CreateIntegrationDto,
@@ -28,7 +29,7 @@ import { NotificationType } from '@prisma/client';
 @Injectable()
 export class IntegrationService {
   private readonly logger = new Logger(IntegrationService.name);
-  private readonly providers: Map<IntegrationType, any>;
+  private readonly providers = new Map<IntegrationType, IntegrationProvider>();
 
   constructor(
     private prisma: PrismaService,
@@ -42,13 +43,11 @@ export class IntegrationService {
     private slackProvider: SlackProvider,
   ) {
     // Initialize provider map
-    this.providers = new Map([
-      [IntegrationType.JIRA, this.jiraProvider],
-      [IntegrationType.LINEAR, this.linearProvider],
-      [IntegrationType.NOTION, this.notionProvider],
-      [IntegrationType.GITHUB, this.githubProvider],
-      [IntegrationType.SLACK, this.slackProvider],
-    ]);
+    this.providers.set(IntegrationType.JIRA, this.jiraProvider);
+    this.providers.set(IntegrationType.LINEAR, this.linearProvider);
+    this.providers.set(IntegrationType.NOTION, this.notionProvider);
+    this.providers.set(IntegrationType.GITHUB, this.githubProvider);
+    this.providers.set(IntegrationType.SLACK, this.slackProvider);
   }
 
   /**
@@ -91,7 +90,12 @@ export class IntegrationService {
       throw new BadRequestException(`Integration type ${dto.type} not supported`);
     }
 
-    const isValid = await provider.validateConfig(dto.config);
+    const configWithName: IntegrationConfig = {
+      name: dto.type,
+      ...dto.config,
+    };
+    const isValid = await provider.validateConfig(configWithName);
+
     if (!isValid) {
       throw new BadRequestException('Invalid integration configuration');
     }
@@ -161,7 +165,12 @@ export class IntegrationService {
     // Validate new config if provided
     if (dto.config) {
       const provider = this.providers.get(integration.type as IntegrationType);
-      const isValid = await provider.validateConfig(dto.config);
+      const configWithName: IntegrationConfig = {
+        name: integration.type,
+        ...dto.config,
+      };
+      const isValid = await provider.validateConfig(configWithName);
+
       if (!isValid) {
         throw new BadRequestException('Invalid integration configuration');
       }

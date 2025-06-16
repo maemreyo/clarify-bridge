@@ -203,11 +203,11 @@ export class PineconeProvider implements VectorProvider {
     try {
       const response = await this.index.fetch(ids);
 
-      return Object.entries(response.records).map(([id, record]) => ({
+      return Object.entries(response.records || {}).map(([id, record]: [string, any]) => ({
         id,
-        content: record.metadata?.content || '',
-        embedding: record.values,
-        metadata: record.metadata as VectorMetadata,
+        content: record?.metadata?.content || '',
+        embedding: record?.values || [],
+        metadata: (record?.metadata || {}) as VectorMetadata,
       }));
     } catch (error) {
       this.logger.error('Fetch failed', error);

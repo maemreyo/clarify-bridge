@@ -104,4 +104,6 @@ export class PaymentController {
   }
 }
 
+export { PaymentController as StripeWebhookController };
+
 // ============================================

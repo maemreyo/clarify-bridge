@@ -15,9 +15,8 @@ export type DiagramType =
 export interface DiagramGenerationContext {
   type: DiagramType;
   title: string;
-  description: string;
-  data: any;
-  options?: DiagramOptions;
+  content: string;
+  metadata?: Record<string, any>;
 }
 
 export interface DiagramOptions {

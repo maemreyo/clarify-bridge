@@ -283,8 +283,8 @@ export class GenerationStatusDto {
   @ApiProperty()
   jobId: string;
 
-  @ApiProperty({ enum: ['queued', 'processing', 'completed', 'failed'] })
-  status: 'queued' | 'processing' | 'completed' | 'failed';
+  @ApiProperty({ enum: ['queued', 'processing', 'completed', 'failed', 'not_found'] })
+  status: 'queued' | 'processing' | 'completed' | 'failed' | 'not_found';
 
   @ApiPropertyOptional()
   progress?: number;

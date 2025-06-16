@@ -395,7 +395,12 @@ export class MonitoringService {
             eventType: 'metrics.flush',
             eventData: {
               metrics: aggregatedMetrics,
-              performanceBuffer: this.performanceBuffer.slice(0, 100), // Limit to 100 entries
+              performanceBuffer: this.performanceBuffer.slice(0, 100).map(p => ({
+                operation: p.operation,
+                duration: p.duration,
+                success: p.success,
+                metadata: p.metadata || {},
+              })),
             },
           },
         });

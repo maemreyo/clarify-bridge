@@ -175,3 +175,5 @@ export class SpecificationController {
 }
 
 // ============================================
+
+export { SpecificationController as SpecificationVersionController };

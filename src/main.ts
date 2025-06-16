@@ -5,8 +5,8 @@ import { ValidationPipe, VersioningType } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { Logger } from 'nestjs-pino';
-import * as helmet from 'helmet';
-import * as cookieParser from 'cookie-parser';
+import helmet from 'helmet'; // Change to default import
+import cookieParser from 'cookie-parser'; // Change to default import
 import { AppModule } from './app.module';
 import { PrismaService } from '@core/database';
 
@@ -21,7 +21,6 @@ async function bootstrap() {
 
   // Enable shutdown hooks
   app.enableShutdownHooks();
-  prismaService.enableShutdownHooks(app);
 
   // Security
   app.use(
@@ -106,7 +105,8 @@ async function bootstrap() {
 
   // Trust proxy for production
   if (configService.get('app.env') === 'production') {
-    app.set('trust proxy', 1);
+    const expressApp = app.getHttpAdapter().getInstance();
+    expressApp.set('trust proxy', 1);
   }
 
   // Graceful shutdown
