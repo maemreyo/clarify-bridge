@@ -84,6 +84,7 @@ export class QualityAssuranceService {
       // Determine if human review is required
       const requiresHumanReview = this.shouldRequireHumanReview(scores, allIssues);
 
+      // Create the complete result object
       const result: QualityCheckResult = {
         ...scores,
         issues: allIssues,
@@ -274,7 +275,10 @@ Provide your evaluation in JSON format:
     return (scores.pmCompleteness + scores.frontendCompleteness + scores.backendCompleteness) / 3;
   }
 
-  private shouldRequireHumanReview(scores: QualityCheckResult, issues: QualityIssue[]): boolean {
+  private shouldRequireHumanReview(
+    scores: { overallScore: number; aiSelfScore: number },
+    issues: QualityIssue[],
+  ): boolean {
     // Require review if:
     // 1. Overall score is below threshold
     if (scores.overallScore < 0.7) return true;
