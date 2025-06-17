@@ -1,10 +1,8 @@
+// UPDATED: 2025-06-17 - Added comprehensive payment service tests
+
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
-import {
-  BadRequestException,
-  NotFoundException,
-  InternalServerErrorException,
-} from '@nestjs/common';
+import { BadRequestException, NotFoundException, InternalServerErrorException } from '@nestjs/common';
 import { PaymentService } from './payment.service';
 import { PrismaService } from '@core/database';
 import { NotificationService } from '@core/notification';
@@ -26,61 +24,75 @@ describe('PaymentService', () => {
   let notificationService: jest.Mocked<NotificationService>;
   let stripeMock: jest.Mocked<Stripe>;
 
+  const mockUserId = 'user-123';
+  const mockCustomerId = 'cus_mock123';
+  const mockSubscriptionId = 'sub_mock123';
+  const mockSessionId = 'cs_mock123';
+
   const mockUser = {
-    id: 'user-123',
+    id: mockUserId,
     email: 'test@example.com',
     name: 'Test User',
     subscriptionTier: SubscriptionTier.FREE,
     subscription: null,
   };
 
-  const mockSubscription = {
-    id: 'sub-123',
-    userId: 'user-123',
-    stripeCustomerId: 'cus-123',
-    stripeSubscriptionId: 'stripe-sub-123',
-    status: SubscriptionStatus.ACTIVE,
-    tier: SubscriptionTier.PREMIUM,
-    currentPeriodStart: new Date(),
-    currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-    createdAt: new Date(),
-    updatedAt: new Date(),
+  const mockUserWithSubscription = {
+    ...mockUser,
+    subscription: {
+      id: 'subscription-123',
+      stripeCustomerId: mockCustomerId,
+      stripeSubscriptionId: mockSubscriptionId,
+      status: SubscriptionStatus.ACTIVE,
+      tier: SubscriptionTier.STARTER,
+      interval: 'monthly',
+      currentPeriodEnd: new Date('2024-07-15'),
+      cancelAtPeriodEnd: false,
+    },
   };
 
   const mockStripeCustomer = {
-    id: 'cus-123',
+    id: mockCustomerId,
     email: 'test@example.com',
+    name: 'Test User',
+    metadata: { userId: mockUserId },
   };
 
   const mockStripeSession = {
-    id: 'cs-123',
-    url: 'https://checkout.stripe.com/session/cs-123',
+    id: mockSessionId,
+    url: 'https://checkout.stripe.com/session/cs_mock123',
+    customer: mockCustomerId,
+    metadata: {
+      userId: mockUserId,
+      tier: SubscriptionTier.STARTER,
+      interval: 'monthly',
+    },
   };
 
   const mockStripeSubscription = {
-    id: 'stripe-sub-123',
-    customer: 'cus-123',
+    id: mockSubscriptionId,
+    customer: mockCustomerId,
     status: 'active',
-    current_period_start: Math.floor(Date.now() / 1000),
-    current_period_end: Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60,
+    current_period_end: 1720915200, // July 15, 2024
+    cancel_at_period_end: false,
     items: {
       data: [
         {
           price: {
-            id: 'price-123',
+            id: 'price_mock_starter_monthly',
             recurring: { interval: 'month' },
           },
         },
       ],
     },
     metadata: {
-      userId: 'user-123',
-      tier: 'PREMIUM',
+      userId: mockUserId,
+      tier: SubscriptionTier.STARTER,
     },
   };
 
   beforeEach(async () => {
-    // Create Stripe mock instance
+    // Create mock Stripe instance
     stripeMock = {
       customers: {
         create: jest.fn(),
@@ -104,10 +116,12 @@ describe('PaymentService', () => {
       webhooks: {
         constructEvent: jest.fn(),
       },
+      invoices: {
+        retrieve: jest.fn(),
+      },
     } as any;
 
-    // Mock Stripe constructor
-    (Stripe as any).mockImplementation(() => stripeMock);
+    (Stripe as jest.MockedClass<typeof Stripe>).mockImplementation(() => stripeMock);
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -126,17 +140,16 @@ describe('PaymentService', () => {
               update: jest.fn(),
             },
             subscription: {
-              findUnique: jest.fn(),
               create: jest.fn(),
               update: jest.fn(),
+              upsert: jest.fn(),
             },
-            $transaction: jest.fn(),
           },
         },
         {
           provide: NotificationService,
           useValue: {
-            sendNotification: jest.fn(),
+            sendEmailNotification: jest.fn(),
           },
         },
       ],
@@ -147,53 +160,61 @@ describe('PaymentService', () => {
     prismaService = module.get(PrismaService);
     notificationService = module.get(NotificationService);
 
-    // Setup default config
+    // Setup default config mock
     configService.get.mockImplementation((key: string) => {
-      if (key === 'STRIPE_SECRET_KEY') return 'sk_test_123';
-      if (key === 'STRIPE_WEBHOOK_SECRET') return 'whsec_123';
-      return null;
+      const config = {
+        STRIPE_SECRET_KEY: 'sk_test_mock_key',
+        STRIPE_WEBHOOK_SECRET: 'whsec_mock_secret',
+      };
+      return config[key];
     });
 
     jest.clearAllMocks();
   });
 
-  describe('initialization', () => {
-    it('should initialize with Stripe when secret key is provided', () => {
-      expect(Stripe).toHaveBeenCalledWith('sk_test_123', {
+  describe('constructor', () => {
+    it('should initialize Stripe when secret key is provided', () => {
+      // Arrange
+      configService.get.mockReturnValue('sk_test_mock_key');
+
+      // Act
+      new PaymentService(configService, prismaService, notificationService);
+
+      // Assert
+      expect(Stripe).toHaveBeenCalledWith('sk_test_mock_key', {
         apiVersion: '2023-10-16',
       });
     });
 
-    it('should log warning when Stripe key is not configured', async () => {
-      // Re-create service without Stripe key
-      configService.get.mockReturnValue(null);
+    it('should log warning when Stripe key is not configured', () => {
+      // Arrange
+      configService.get.mockReturnValue(undefined);
+      const loggerSpy = jest.spyOn((service as any).logger, 'warn').mockImplementation();
 
-      const moduleWithoutStripe = await Test.createTestingModule({
-        providers: [
-          PaymentService,
-          { provide: ConfigService, useValue: configService },
-          { provide: PrismaService, useValue: prismaService },
-          { provide: NotificationService, useValue: notificationService },
-        ],
-      }).compile();
+      // Act
+      new PaymentService(configService, prismaService, notificationService);
 
-      const serviceWithoutStripe = moduleWithoutStripe.get<PaymentService>(PaymentService);
-      expect(serviceWithoutStripe).toBeDefined();
+      // Assert
+      expect(loggerSpy).toHaveBeenCalledWith('Stripe secret key not configured');
     });
   });
 
   describe('createCheckoutSession', () => {
     const checkoutData: CheckoutSessionData = {
-      userId: 'user-123',
-      tier: SubscriptionTier.PREMIUM,
+      userId: mockUserId,
+      tier: SubscriptionTier.STARTER,
       interval: 'monthly',
-      successUrl: 'https://app.com/success',
-      cancelUrl: 'https://app.com/cancel',
+      successUrl: 'https://app.example.com/success',
+      cancelUrl: 'https://app.example.com/cancel',
     };
 
-    it('should create checkout session for new subscription', async () => {
+    beforeEach(() => {
+      (service as any).stripe = stripeMock;
+    });
+
+    it('should create checkout session successfully for new customer', async () => {
       // Arrange
-      prismaService.user.findUnique.mockResolvedValue(mockUser);
+      prismaService.user.findUnique.mockResolvedValue(mockUser as any);
       stripeMock.customers.create.mockResolvedValue(mockStripeCustomer as any);
       stripeMock.checkout.sessions.create.mockResolvedValue(mockStripeSession as any);
 
@@ -201,102 +222,74 @@ describe('PaymentService', () => {
       const result = await service.createCheckoutSession(checkoutData);
 
       // Assert
+      expect(prismaService.user.findUnique).toHaveBeenCalledWith({
+        where: { id: mockUserId },
+        include: { subscription: true },
+      });
+
       expect(stripeMock.customers.create).toHaveBeenCalledWith({
         email: mockUser.email,
         name: mockUser.name,
-        metadata: { userId: mockUser.id },
+        metadata: { userId: mockUserId },
       });
+
       expect(stripeMock.checkout.sessions.create).toHaveBeenCalledWith({
-        customer: 'cus-123',
+        customer: mockCustomerId,
         payment_method_types: ['card'],
         mode: 'subscription',
         line_items: [
           {
-            price: PRICING_CONFIG[SubscriptionTier.PREMIUM].stripePriceIdMonthly,
+            price: PRICING_CONFIG[SubscriptionTier.STARTER].stripePriceIdMonthly,
             quantity: 1,
           },
         ],
         success_url: checkoutData.successUrl,
         cancel_url: checkoutData.cancelUrl,
         metadata: {
-          userId: mockUser.id,
-          tier: checkoutData.tier,
-          interval: checkoutData.interval,
+          userId: mockUserId,
+          tier: SubscriptionTier.STARTER,
+          interval: 'monthly',
         },
         subscription_data: {
           metadata: {
-            userId: mockUser.id,
-            tier: checkoutData.tier,
+            userId: mockUserId,
+            tier: SubscriptionTier.STARTER,
           },
         },
       });
-      expect(result).toBe('https://checkout.stripe.com/session/cs-123');
+
+      expect(result).toBe('https://checkout.stripe.com/session/cs_mock123');
     });
 
-    it('should use existing Stripe customer if available', async () => {
+    it('should create checkout session for existing customer', async () => {
       // Arrange
-      const userWithSubscription = {
+      const userWithCustomer = {
         ...mockUser,
-        subscription: { ...mockSubscription, status: SubscriptionStatus.CANCELLED },
+        subscription: {
+          stripeCustomerId: mockCustomerId,
+          status: SubscriptionStatus.CANCELLED,
+        },
       };
-      prismaService.user.findUnique.mockResolvedValue(userWithSubscription);
+      prismaService.user.findUnique.mockResolvedValue(userWithCustomer as any);
       stripeMock.checkout.sessions.create.mockResolvedValue(mockStripeSession as any);
 
       // Act
-      await service.createCheckoutSession(checkoutData);
+      const result = await service.createCheckoutSession(checkoutData);
 
       // Assert
       expect(stripeMock.customers.create).not.toHaveBeenCalled();
       expect(stripeMock.checkout.sessions.create).toHaveBeenCalledWith(
         expect.objectContaining({
-          customer: 'cus-123',
-        }),
+          customer: mockCustomerId,
+        })
       );
-    });
-
-    it('should throw error if payment system not configured', async () => {
-      // Arrange
-      configService.get.mockReturnValue(null);
-      const serviceWithoutStripe = new PaymentService(
-        configService,
-        prismaService,
-        notificationService,
-      );
-
-      // Act & Assert
-      await expect(serviceWithoutStripe.createCheckoutSession(checkoutData)).rejects.toThrow(
-        InternalServerErrorException,
-      );
-    });
-
-    it('should throw error if user not found', async () => {
-      // Arrange
-      prismaService.user.findUnique.mockResolvedValue(null);
-
-      // Act & Assert
-      await expect(service.createCheckoutSession(checkoutData)).rejects.toThrow(
-        NotFoundException,
-      );
-    });
-
-    it('should throw error if user already has active subscription', async () => {
-      // Arrange
-      const userWithActiveSubscription = {
-        ...mockUser,
-        subscription: mockSubscription,
-      };
-      prismaService.user.findUnique.mockResolvedValue(userWithActiveSubscription);
-
-      // Act & Assert
-      await expect(service.createCheckoutSession(checkoutData)).rejects.toThrow(
-        BadRequestException,
-      );
+      expect(result).toBe('https://checkout.stripe.com/session/cs_mock123');
     });
 
     it('should handle yearly interval pricing', async () => {
       // Arrange
       const yearlyData = { ...checkoutData, interval: 'yearly' as const };
-      prismaService.user.findUnique.mockResolvedValue(mockUser);
+      prismaService.user.findUnique.mockResolvedValue(mockUser as any);
       stripeMock.customers.create.mockResolvedValue(mockStripeCustomer as any);
       stripeMock.checkout.sessions.create.mockResolvedValue(mockStripeSession as any);
 
@@ -308,36 +301,142 @@ describe('PaymentService', () => {
         expect.objectContaining({
           line_items: [
             {
-              price: PRICING_CONFIG[SubscriptionTier.PREMIUM].stripePriceIdYearly,
+              price: PRICING_CONFIG[SubscriptionTier.STARTER].stripePriceIdYearly,
               quantity: 1,
             },
           ],
-        }),
+        })
       );
+    });
+
+    it('should handle different subscription tiers', async () => {
+      // Arrange
+      const tiers = [SubscriptionTier.STARTER, SubscriptionTier.PROFESSIONAL, SubscriptionTier.ENTERPRISE];
+
+      for (const tier of tiers) {
+        const tierData = { ...checkoutData, tier };
+        prismaService.user.findUnique.mockResolvedValue(mockUser as any);
+        stripeMock.customers.create.mockResolvedValue(mockStripeCustomer as any);
+        stripeMock.checkout.sessions.create.mockResolvedValue(mockStripeSession as any);
+
+        // Act
+        await service.createCheckoutSession(tierData);
+
+        // Assert
+        expect(stripeMock.checkout.sessions.create).toHaveBeenCalledWith(
+          expect.objectContaining({
+            line_items: [
+              {
+                price: PRICING_CONFIG[tier].stripePriceIdMonthly,
+                quantity: 1,
+              },
+            ],
+          })
+        );
+
+        jest.clearAllMocks();
+      }
+    });
+
+    it('should throw error when Stripe is not configured', async () => {
+      // Arrange
+      (service as any).stripe = null;
+
+      // Act & Assert
+      await expect(service.createCheckoutSession(checkoutData)).rejects.toThrow(
+        InternalServerErrorException
+      );
+      await expect(service.createCheckoutSession(checkoutData)).rejects.toThrow(
+        'Payment system not configured'
+      );
+    });
+
+    it('should throw error when user not found', async () => {
+      // Arrange
+      prismaService.user.findUnique.mockResolvedValue(null);
+
+      // Act & Assert
+      await expect(service.createCheckoutSession(checkoutData)).rejects.toThrow(NotFoundException);
+      await expect(service.createCheckoutSession(checkoutData)).rejects.toThrow('User not found');
+    });
+
+    it('should throw error when user already has active subscription', async () => {
+      // Arrange
+      const userWithActiveSubscription = {
+        ...mockUser,
+        subscription: {
+          ...mockUserWithSubscription.subscription,
+          status: SubscriptionStatus.ACTIVE,
+        },
+      };
+      prismaService.user.findUnique.mockResolvedValue(userWithActiveSubscription as any);
+
+      // Act & Assert
+      await expect(service.createCheckoutSession(checkoutData)).rejects.toThrow(BadRequestException);
+      await expect(service.createCheckoutSession(checkoutData)).rejects.toThrow(
+        'User already has an active subscription'
+      );
+    });
+
+    it('should throw error for FREE tier', async () => {
+      // Arrange
+      const freeData = { ...checkoutData, tier: SubscriptionTier.FREE };
+      prismaService.user.findUnique.mockResolvedValue(mockUser as any);
+
+      // Act & Assert
+      await expect(service.createCheckoutSession(freeData)).rejects.toThrow(BadRequestException);
+      await expect(service.createCheckoutSession(freeData)).rejects.toThrow(
+        'Invalid subscription tier'
+      );
+    });
+
+    it('should throw error when price is not configured', async () => {
+      // Arrange
+      const originalConfig = PRICING_CONFIG[SubscriptionTier.STARTER];
+      (PRICING_CONFIG[SubscriptionTier.STARTER] as any).stripePriceIdMonthly = null;
+
+      prismaService.user.findUnique.mockResolvedValue(mockUser as any);
+
+      // Act & Assert
+      await expect(service.createCheckoutSession(checkoutData)).rejects.toThrow(BadRequestException);
+      await expect(service.createCheckoutSession(checkoutData)).rejects.toThrow(
+        'Price not configured for this tier'
+      );
+
+      // Restore original config
+      PRICING_CONFIG[SubscriptionTier.STARTER] = originalConfig;
     });
 
     it('should handle Stripe API errors', async () => {
       // Arrange
-      prismaService.user.findUnique.mockResolvedValue(mockUser);
+      prismaService.user.findUnique.mockResolvedValue(mockUser as any);
       stripeMock.customers.create.mockRejectedValue(new Error('Stripe API error'));
+      const loggerSpy = jest.spyOn((service as any).logger, 'error').mockImplementation();
 
       // Act & Assert
       await expect(service.createCheckoutSession(checkoutData)).rejects.toThrow(
-        InternalServerErrorException,
+        InternalServerErrorException
       );
+      await expect(service.createCheckoutSession(checkoutData)).rejects.toThrow(
+        'Failed to create payment session'
+      );
+      expect(loggerSpy).toHaveBeenCalledWith('Failed to create checkout session', expect.any(Error));
     });
   });
 
   describe('updateSubscription', () => {
     const updateData: SubscriptionUpdateData = {
-      tier: SubscriptionTier.BUSINESS,
+      tier: SubscriptionTier.PROFESSIONAL,
       interval: 'yearly',
     };
 
+    beforeEach(() => {
+      (service as any).stripe = stripeMock;
+    });
+
     it('should update subscription successfully', async () => {
       // Arrange
-      const userWithSubscription = { ...mockUser, subscription: mockSubscription };
-      prismaService.user.findUnique.mockResolvedValue(userWithSubscription);
+      prismaService.user.findUnique.mockResolvedValue(mockUserWithSubscription as any);
       stripeMock.subscriptions.retrieve.mockResolvedValue(mockStripeSubscription as any);
       stripeMock.subscriptions.update.mockResolvedValue({
         ...mockStripeSubscription,
@@ -345,326 +444,483 @@ describe('PaymentService', () => {
           data: [
             {
               price: {
-                id: PRICING_CONFIG[SubscriptionTier.BUSINESS].stripePriceIdYearly,
+                id: PRICING_CONFIG[SubscriptionTier.PROFESSIONAL].stripePriceIdYearly,
+                recurring: { interval: 'year' },
               },
             },
           ],
         },
       } as any);
+      prismaService.subscription.update.mockResolvedValue({} as any);
+      notificationService.sendEmailNotification.mockResolvedValue({} as any);
 
       // Act
-      await service.updateSubscription('user-123', updateData);
+      await service.updateSubscription(mockUserId, updateData);
 
       // Assert
-      expect(stripeMock.subscriptions.update).toHaveBeenCalledWith(
-        'stripe-sub-123',
-        {
-          items: [
-            {
-              id: mockStripeSubscription.items.data[0].id,
-              price: PRICING_CONFIG[SubscriptionTier.BUSINESS].stripePriceIdYearly,
-            },
-          ],
-          proration_behavior: 'create_prorations',
+      expect(stripeMock.subscriptions.retrieve).toHaveBeenCalledWith(mockSubscriptionId);
+      expect(stripeMock.subscriptions.update).toHaveBeenCalledWith(mockSubscriptionId, {
+        items: [
+          {
+            id: mockStripeSubscription.items.data[0].id,
+            price: PRICING_CONFIG[SubscriptionTier.PROFESSIONAL].stripePriceIdYearly,
+          },
+        ],
+        metadata: {
+          userId: mockUserId,
+          tier: SubscriptionTier.PROFESSIONAL,
         },
-      );
+        proration_behavior: 'always_invoice',
+      });
+
       expect(prismaService.subscription.update).toHaveBeenCalledWith({
-        where: { id: 'sub-123' },
-        data: { tier: SubscriptionTier.BUSINESS },
+        where: { id: mockUserWithSubscription.subscription.id },
+        data: {
+          tier: SubscriptionTier.PROFESSIONAL,
+          interval: 'yearly',
+        },
       });
-      expect(prismaService.user.update).toHaveBeenCalledWith({
-        where: { id: 'user-123' },
-        data: { subscriptionTier: SubscriptionTier.BUSINESS },
-      });
     });
 
-    it('should throw error if subscription not found', async () => {
+    it('should update only tier when interval not specified', async () => {
       // Arrange
-      prismaService.user.findUnique.mockResolvedValue(mockUser);
-
-      // Act & Assert
-      await expect(service.updateSubscription('user-123', updateData)).rejects.toThrow(
-        NotFoundException,
-      );
-    });
-
-    it('should throw error if subscription not active', async () => {
-      // Arrange
-      const userWithInactiveSubscription = {
-        ...mockUser,
-        subscription: { ...mockSubscription, status: SubscriptionStatus.CANCELLED },
-      };
-      prismaService.user.findUnique.mockResolvedValue(userWithInactiveSubscription);
-
-      // Act & Assert
-      await expect(service.updateSubscription('user-123', updateData)).rejects.toThrow(
-        BadRequestException,
-      );
-    });
-
-    it('should downgrade to FREE tier correctly', async () => {
-      // Arrange
-      const downgradeData: SubscriptionUpdateData = { tier: SubscriptionTier.FREE };
-      const userWithSubscription = { ...mockUser, subscription: mockSubscription };
-      prismaService.user.findUnique.mockResolvedValue(userWithSubscription);
-      stripeMock.subscriptions.cancel.mockResolvedValue({
-        ...mockStripeSubscription,
-        status: 'canceled',
-      } as any);
+      const tierOnlyUpdate = { tier: SubscriptionTier.ENTERPRISE };
+      prismaService.user.findUnique.mockResolvedValue(mockUserWithSubscription as any);
+      stripeMock.subscriptions.retrieve.mockResolvedValue(mockStripeSubscription as any);
+      stripeMock.subscriptions.update.mockResolvedValue(mockStripeSubscription as any);
+      prismaService.subscription.update.mockResolvedValue({} as any);
 
       // Act
-      await service.updateSubscription('user-123', downgradeData);
+      await service.updateSubscription(mockUserId, tierOnlyUpdate);
 
       // Assert
-      expect(stripeMock.subscriptions.cancel).toHaveBeenCalledWith('stripe-sub-123', {
-        prorate: true,
-      });
-      expect(prismaService.subscription.update).toHaveBeenCalledWith({
-        where: { id: 'sub-123' },
-        data: { status: SubscriptionStatus.CANCELLED },
+      expect(stripeMock.subscriptions.update).toHaveBeenCalledWith(mockSubscriptionId, {
+        items: [
+          {
+            id: mockStripeSubscription.items.data[0].id,
+            price: PRICING_CONFIG[SubscriptionTier.ENTERPRISE].stripePriceIdMonthly,
+          },
+        ],
+        metadata: {
+          userId: mockUserId,
+          tier: SubscriptionTier.ENTERPRISE,
+        },
+        proration_behavior: 'always_invoice',
       });
     });
-  });
 
-  describe('cancelSubscription', () => {
-    it('should cancel subscription at period end', async () => {
+    it('should handle downgrade to FREE tier', async () => {
       // Arrange
-      const userWithSubscription = {
-        ...mockUser,
-        subscription: { ...mockSubscription, stripeSubscriptionId: 'stripe-sub-123' },
-      };
-      prismaService.user.findUnique.mockResolvedValue(userWithSubscription);
+      const freeUpdate = { tier: SubscriptionTier.FREE };
+      prismaService.user.findUnique.mockResolvedValue(mockUserWithSubscription as any);
       stripeMock.subscriptions.update.mockResolvedValue({
         ...mockStripeSubscription,
         cancel_at_period_end: true,
       } as any);
+      prismaService.subscription.update.mockResolvedValue({} as any);
 
       // Act
-      await service.cancelSubscription('user-123');
+      await service.updateSubscription(mockUserId, freeUpdate);
 
       // Assert
-      expect(stripeMock.subscriptions.update).toHaveBeenCalledWith('stripe-sub-123', {
+      expect(stripeMock.subscriptions.update).toHaveBeenCalledWith(mockSubscriptionId, {
         cancel_at_period_end: true,
+        metadata: {
+          userId: mockUserId,
+          tier: SubscriptionTier.FREE,
+        },
       });
-      expect(notificationService.sendNotification).toHaveBeenCalledWith(
-        'user-123',
-        NotificationType.SUBSCRIPTION_UPDATE,
-        expect.objectContaining({
-          title: 'Subscription Cancellation Scheduled',
-        }),
+
+      expect(prismaService.subscription.update).toHaveBeenCalledWith({
+        where: { id: mockUserWithSubscription.subscription.id },
+        data: {
+          tier: SubscriptionTier.FREE,
+          cancelAtPeriodEnd: true,
+        },
+      });
+    });
+
+    it('should throw error when Stripe is not configured', async () => {
+      // Arrange
+      (service as any).stripe = null;
+
+      // Act & Assert
+      await expect(service.updateSubscription(mockUserId, updateData)).rejects.toThrow(
+        InternalServerErrorException
       );
     });
 
-    it('should throw error if no active subscription', async () => {
+    it('should throw error when user or subscription not found', async () => {
       // Arrange
-      prismaService.user.findUnique.mockResolvedValue(mockUser);
+      prismaService.user.findUnique.mockResolvedValue(null);
 
       // Act & Assert
-      await expect(service.cancelSubscription('user-123')).rejects.toThrow(NotFoundException);
+      await expect(service.updateSubscription(mockUserId, updateData)).rejects.toThrow(
+        NotFoundException
+      );
+      await expect(service.updateSubscription(mockUserId, updateData)).rejects.toThrow(
+        'Subscription not found'
+      );
+    });
+
+    it('should throw error when subscription is not active', async () => {
+      // Arrange
+      const userWithInactiveSubscription = {
+        ...mockUserWithSubscription,
+        subscription: {
+          ...mockUserWithSubscription.subscription,
+          status: SubscriptionStatus.CANCELLED,
+        },
+      };
+      prismaService.user.findUnique.mockResolvedValue(userWithInactiveSubscription as any);
+
+      // Act & Assert
+      await expect(service.updateSubscription(mockUserId, updateData)).rejects.toThrow(
+        BadRequestException
+      );
+      await expect(service.updateSubscription(mockUserId, updateData)).rejects.toThrow(
+        'No active subscription to update'
+      );
+    });
+
+    it('should handle Stripe update errors', async () => {
+      // Arrange
+      prismaService.user.findUnique.mockResolvedValue(mockUserWithSubscription as any);
+      stripeMock.subscriptions.retrieve.mockResolvedValue(mockStripeSubscription as any);
+      stripeMock.subscriptions.update.mockRejectedValue(new Error('Stripe update failed'));
+      const loggerSpy = jest.spyOn((service as any).logger, 'error').mockImplementation();
+
+      // Act & Assert
+      await expect(service.updateSubscription(mockUserId, updateData)).rejects.toThrow(
+        InternalServerErrorException
+      );
+      expect(loggerSpy).toHaveBeenCalledWith('Failed to update subscription', expect.any(Error));
     });
   });
 
-  describe('handleWebhookEvent', () => {
-    const mockPayload = 'raw-webhook-payload';
-    const mockSignature = 'stripe-signature';
+  describe('cancelSubscription', () => {
+    beforeEach(() => {
+      (service as any).stripe = stripeMock;
+    });
 
-    it('should handle checkout.session.completed event', async () => {
+    it('should cancel subscription at period end', async () => {
       // Arrange
-      const checkoutSession = {
-        id: 'cs-123',
-        customer: 'cus-123',
-        subscription: 'stripe-sub-123',
-        metadata: {
-          userId: 'user-123',
-          tier: 'PREMIUM',
-        },
-      };
-
-      stripeMock.webhooks.constructEvent.mockReturnValue({
-        type: 'checkout.session.completed',
-        data: { object: checkoutSession },
+      prismaService.user.findUnique.mockResolvedValue(mockUserWithSubscription as any);
+      stripeMock.subscriptions.update.mockResolvedValue({
+        ...mockStripeSubscription,
+        cancel_at_period_end: true,
       } as any);
-
-      prismaService.user.findUnique.mockResolvedValue(mockUser);
-      stripeMock.subscriptions.retrieve.mockResolvedValue(mockStripeSubscription as any);
-      prismaService.$transaction.mockImplementation(async (callback) => callback(prismaService));
+      prismaService.subscription.update.mockResolvedValue({} as any);
+      notificationService.sendEmailNotification.mockResolvedValue({} as any);
 
       // Act
-      await service.handleWebhookEvent(mockPayload, mockSignature);
+      await service.cancelSubscription(mockUserId);
 
       // Assert
-      expect(stripeMock.webhooks.constructEvent).toHaveBeenCalledWith(
-        mockPayload,
-        mockSignature,
-        'whsec_123',
-      );
-      expect(prismaService.subscription.create).toHaveBeenCalled();
-      expect(prismaService.user.update).toHaveBeenCalledWith({
-        where: { id: 'user-123' },
-        data: { subscriptionTier: SubscriptionTier.PREMIUM },
+      expect(stripeMock.subscriptions.update).toHaveBeenCalledWith(mockSubscriptionId, {
+        cancel_at_period_end: true,
       });
-      expect(notificationService.sendNotification).toHaveBeenCalled();
+
+      expect(prismaService.subscription.update).toHaveBeenCalledWith({
+        where: { id: mockUserWithSubscription.subscription.id },
+        data: { cancelAtPeriodEnd: true },
+      });
+
+      expect(notificationService.sendEmailNotification).toHaveBeenCalledWith(
+        NotificationType.SUBSCRIPTION_CANCELLED,
+        mockUserWithSubscription.email,
+        expect.objectContaining({
+          userName: mockUserWithSubscription.name,
+          cancelDate: expect.any(String),
+        })
+      );
+    });
+
+    it('should throw error when Stripe is not configured', async () => {
+      // Arrange
+      (service as any).stripe = null;
+
+      // Act & Assert
+      await expect(service.cancelSubscription(mockUserId)).rejects.toThrow(
+        InternalServerErrorException
+      );
+    });
+
+    it('should throw error when user or subscription not found', async () => {
+      // Arrange
+      prismaService.user.findUnique.mockResolvedValue(null);
+
+      // Act & Assert
+      await expect(service.cancelSubscription(mockUserId)).rejects.toThrow(NotFoundException);
+    });
+
+    it('should throw error when subscription is not active', async () => {
+      // Arrange
+      const userWithInactiveSubscription = {
+        ...mockUserWithSubscription,
+        subscription: {
+          ...mockUserWithSubscription.subscription,
+          status: SubscriptionStatus.CANCELLED,
+        },
+      };
+      prismaService.user.findUnique.mockResolvedValue(userWithInactiveSubscription as any);
+
+      // Act & Assert
+      await expect(service.cancelSubscription(mockUserId)).rejects.toThrow(BadRequestException);
+    });
+  });
+
+  describe('createCustomerPortalSession', () => {
+    beforeEach(() => {
+      (service as any).stripe = stripeMock;
+    });
+
+    it('should create customer portal session successfully', async () => {
+      // Arrange
+      const returnUrl = 'https://app.example.com/settings';
+      const mockPortalSession = {
+        url: 'https://billing.stripe.com/portal/session/bps_mock123',
+      };
+
+      prismaService.user.findUnique.mockResolvedValue(mockUserWithSubscription as any);
+      stripeMock.billingPortal.sessions.create.mockResolvedValue(mockPortalSession as any);
+
+      // Act
+      const result = await service.createCustomerPortalSession(mockUserId, returnUrl);
+
+      // Assert
+      expect(stripeMock.billingPortal.sessions.create).toHaveBeenCalledWith({
+        customer: mockCustomerId,
+        return_url: returnUrl,
+      });
+      expect(result).toBe('https://billing.stripe.com/portal/session/bps_mock123');
+    });
+
+    it('should throw error when user has no subscription', async () => {
+      // Arrange
+      prismaService.user.findUnique.mockResolvedValue(mockUser as any);
+
+      // Act & Assert
+      await expect(service.createCustomerPortalSession(mockUserId, 'https://app.example.com')).rejects.toThrow(
+        NotFoundException
+      );
+    });
+  });
+
+  describe('handleWebhook', () => {
+    const mockWebhookPayload = 'mock_payload';
+    const mockSignature = 'mock_signature';
+    const mockWebhookSecret = 'whsec_mock_secret';
+
+    beforeEach(() => {
+      (service as any).stripe = stripeMock;
+      configService.get.mockImplementation((key: string) => {
+        if (key === 'STRIPE_WEBHOOK_SECRET') return mockWebhookSecret;
+        return 'default_value';
+      });
     });
 
     it('should handle customer.subscription.updated event', async () => {
       // Arrange
-      stripeMock.webhooks.constructEvent.mockReturnValue({
+      const mockEvent = {
         type: 'customer.subscription.updated',
-        data: { object: mockStripeSubscription },
-      } as any);
+        data: {
+          object: {
+            ...mockStripeSubscription,
+            status: 'past_due',
+          },
+        },
+      };
 
-      prismaService.subscription.findUnique.mockResolvedValue(mockSubscription);
+      stripeMock.webhooks.constructEvent.mockReturnValue(mockEvent as any);
+      prismaService.subscription.update.mockResolvedValue({} as any);
+      prismaService.user.update.mockResolvedValue({} as any);
 
       // Act
-      await service.handleWebhookEvent(mockPayload, mockSignature);
+      await service.handleWebhook(mockWebhookPayload, mockSignature);
 
       // Assert
+      expect(stripeMock.webhooks.constructEvent).toHaveBeenCalledWith(
+        mockWebhookPayload,
+        mockSignature,
+        mockWebhookSecret
+      );
+
       expect(prismaService.subscription.update).toHaveBeenCalledWith({
-        where: { id: 'sub-123' },
+        where: { stripeSubscriptionId: mockSubscriptionId },
         data: {
-          currentPeriodStart: expect.any(Date),
-          currentPeriodEnd: expect.any(Date),
-          status: SubscriptionStatus.ACTIVE,
+          status: SubscriptionStatus.PAST_DUE,
+          currentPeriodEnd: new Date(mockStripeSubscription.current_period_end * 1000),
+          cancelAtPeriodEnd: false,
         },
       });
     });
 
     it('should handle customer.subscription.deleted event', async () => {
       // Arrange
-      stripeMock.webhooks.constructEvent.mockReturnValue({
+      const mockEvent = {
         type: 'customer.subscription.deleted',
-        data: { object: mockStripeSubscription },
-      } as any);
+        data: {
+          object: mockStripeSubscription,
+        },
+      };
 
-      prismaService.subscription.findUnique.mockResolvedValue(mockSubscription);
+      stripeMock.webhooks.constructEvent.mockReturnValue(mockEvent as any);
+      prismaService.subscription.update.mockResolvedValue({} as any);
+      prismaService.user.update.mockResolvedValue({} as any);
 
       // Act
-      await service.handleWebhookEvent(mockPayload, mockSignature);
+      await service.handleWebhook(mockWebhookPayload, mockSignature);
 
       // Assert
       expect(prismaService.subscription.update).toHaveBeenCalledWith({
-        where: { id: 'sub-123' },
+        where: { stripeSubscriptionId: mockSubscriptionId },
         data: { status: SubscriptionStatus.CANCELLED },
       });
+
       expect(prismaService.user.update).toHaveBeenCalledWith({
-        where: { id: 'user-123' },
+        where: { id: mockUserId },
         data: { subscriptionTier: SubscriptionTier.FREE },
       });
-      expect(notificationService.sendNotification).toHaveBeenCalled();
     });
 
-    it('should handle invalid webhook signature', async () => {
+    it('should handle invoice.payment_failed event', async () => {
+      // Arrange
+      const mockInvoice = {
+        id: 'in_mock123',
+        customer: mockCustomerId,
+        subscription: mockSubscriptionId,
+        hosted_invoice_url: 'https://invoice.stripe.com/i/mock123',
+      };
+
+      const mockEvent = {
+        type: 'invoice.payment_failed',
+        data: { object: mockInvoice },
+      };
+
+      stripeMock.webhooks.constructEvent.mockReturnValue(mockEvent as any);
+      stripeMock.invoices.retrieve.mockResolvedValue(mockInvoice as any);
+      prismaService.user.findFirst.mockResolvedValue(mockUserWithSubscription as any);
+      notificationService.sendEmailNotification.mockResolvedValue({} as any);
+
+      // Act
+      await service.handleWebhook(mockWebhookPayload, mockSignature);
+
+      // Assert
+      expect(notificationService.sendEmailNotification).toHaveBeenCalledWith(
+        NotificationType.PAYMENT_FAILED,
+        mockUserWithSubscription.email,
+        expect.objectContaining({
+          userName: mockUserWithSubscription.name,
+          invoiceUrl: mockInvoice.hosted_invoice_url,
+        })
+      );
+    });
+
+    it('should handle unrecognized webhook events gracefully', async () => {
+      // Arrange
+      const mockEvent = {
+        type: 'unknown.event.type',
+        data: { object: {} },
+      };
+
+      stripeMock.webhooks.constructEvent.mockReturnValue(mockEvent as any);
+      const loggerSpy = jest.spyOn((service as any).logger, 'log').mockImplementation();
+
+      // Act
+      await service.handleWebhook(mockWebhookPayload, mockSignature);
+
+      // Assert
+      expect(loggerSpy).toHaveBeenCalledWith('Unhandled webhook event: unknown.event.type');
+    });
+
+    it('should throw error on webhook signature verification failure', async () => {
       // Arrange
       stripeMock.webhooks.constructEvent.mockImplementation(() => {
         throw new Error('Invalid signature');
       });
 
       // Act & Assert
-      await expect(service.handleWebhookEvent(mockPayload, mockSignature)).rejects.toThrow(
-        BadRequestException,
-      );
-    });
-
-    it('should throw error if webhook secret not configured', async () => {
-      // Arrange
-      configService.get.mockImplementation((key: string) => {
-        if (key === 'STRIPE_SECRET_KEY') return 'sk_test_123';
-        if (key === 'STRIPE_WEBHOOK_SECRET') return null;
-        return null;
-      });
-
-      // Act & Assert
-      await expect(service.handleWebhookEvent(mockPayload, mockSignature)).rejects.toThrow(
-        InternalServerErrorException,
+      await expect(service.handleWebhook(mockWebhookPayload, 'invalid_signature')).rejects.toThrow(
+        BadRequestException
       );
     });
   });
 
-  describe('getSubscriptionDetails', () => {
-    it('should return subscription details for subscribed user', async () => {
-      // Arrange
-      const userWithSubscription = {
-        ...mockUser,
-        subscriptionTier: SubscriptionTier.PREMIUM,
-        subscription: mockSubscription,
-      };
-      prismaService.user.findUnique.mockResolvedValue(userWithSubscription);
-
-      // Act
-      const result = await service.getSubscriptionDetails('user-123');
-
-      // Assert
-      expect(result).toEqual({
-        currentTier: SubscriptionTier.PREMIUM,
-        subscription: {
-          status: mockSubscription.status,
-          currentPeriodEnd: mockSubscription.currentPeriodEnd,
-          cancelAtPeriodEnd: false,
-        },
-        availableTiers: expect.any(Array),
-      });
-    });
-
-    it('should return details for free tier user', async () => {
-      // Arrange
-      prismaService.user.findUnique.mockResolvedValue(mockUser);
-
-      // Act
-      const result = await service.getSubscriptionDetails('user-123');
-
-      // Assert
-      expect(result).toEqual({
-        currentTier: SubscriptionTier.FREE,
-        subscription: null,
-        availableTiers: expect.any(Array),
-      });
-    });
-
-    it('should throw error if user not found', async () => {
-      // Arrange
-      prismaService.user.findUnique.mockResolvedValue(null);
-
-      // Act & Assert
-      await expect(service.getSubscriptionDetails('non-existent')).rejects.toThrow(
-        NotFoundException,
-      );
+  describe('mapStripeStatus', () => {
+    it('should map Stripe statuses correctly', () => {
+      // Arrange & Act & Assert
+      expect((service as any).mapStripeStatus('active')).toBe(SubscriptionStatus.ACTIVE);
+      expect((service as any).mapStripeStatus('canceled')).toBe(SubscriptionStatus.CANCELLED);
+      expect((service as any).mapStripeStatus('past_due')).toBe(SubscriptionStatus.PAST_DUE);
+      expect((service as any).mapStripeStatus('unpaid')).toBe(SubscriptionStatus.UNPAID);
+      expect((service as any).mapStripeStatus('unknown_status')).toBe(SubscriptionStatus.CANCELLED);
     });
   });
 
-  describe('createCustomerPortalSession', () => {
-    it('should create portal session successfully', async () => {
-      // Arrange
-      const userWithSubscription = {
-        ...mockUser,
-        subscription: { ...mockSubscription, stripeCustomerId: 'cus-123' },
-      };
-      prismaService.user.findUnique.mockResolvedValue(userWithSubscription);
-      stripeMock.billingPortal.sessions.create.mockResolvedValue({
-        url: 'https://billing.stripe.com/session/xyz',
-      } as any);
-
-      // Act
-      const result = await service.createCustomerPortalSession(
-        'user-123',
-        'https://app.com/settings',
-      );
-
-      // Assert
-      expect(stripeMock.billingPortal.sessions.create).toHaveBeenCalledWith({
-        customer: 'cus-123',
-        return_url: 'https://app.com/settings',
-      });
-      expect(result).toBe('https://billing.stripe.com/session/xyz');
+  describe('error handling and edge cases', () => {
+    beforeEach(() => {
+      (service as any).stripe = stripeMock;
     });
 
-    it('should throw error if no subscription found', async () => {
+    it('should handle concurrent requests gracefully', async () => {
       // Arrange
-      prismaService.user.findUnique.mockResolvedValue(mockUser);
+      const checkoutData: CheckoutSessionData = {
+        userId: mockUserId,
+        tier: SubscriptionTier.STARTER,
+        interval: 'monthly',
+        successUrl: 'https://app.example.com/success',
+        cancelUrl: 'https://app.example.com/cancel',
+      };
+
+      prismaService.user.findUnique.mockResolvedValue(mockUser as any);
+      stripeMock.customers.create.mockResolvedValue(mockStripeCustomer as any);
+      stripeMock.checkout.sessions.create.mockResolvedValue(mockStripeSession as any);
+
+      // Act
+      const promises = Array.from({ length: 3 }, () => service.createCheckoutSession(checkoutData));
+      const results = await Promise.all(promises);
+
+      // Assert
+      results.forEach(result => {
+        expect(result).toBe('https://checkout.stripe.com/session/cs_mock123');
+      });
+    });
+
+    it('should handle database errors gracefully', async () => {
+      // Arrange
+      const updateData: SubscriptionUpdateData = { tier: SubscriptionTier.PROFESSIONAL };
+
+      prismaService.user.findUnique.mockResolvedValue(mockUserWithSubscription as any);
+      stripeMock.subscriptions.retrieve.mockResolvedValue(mockStripeSubscription as any);
+      stripeMock.subscriptions.update.mockResolvedValue(mockStripeSubscription as any);
+      prismaService.subscription.update.mockRejectedValue(new Error('Database error'));
 
       // Act & Assert
-      await expect(
-        service.createCustomerPortalSession('user-123', 'https://app.com'),
-      ).rejects.toThrow(NotFoundException);
+      await expect(service.updateSubscription(mockUserId, updateData)).rejects.toThrow(
+        InternalServerErrorException
+      );
+    });
+
+    it('should handle network timeout errors', async () => {
+      // Arrange
+      const checkoutData: CheckoutSessionData = {
+        userId: mockUserId,
+        tier: SubscriptionTier.STARTER,
+        interval: 'monthly',
+        successUrl: 'https://app.example.com/success',
+        cancelUrl: 'https://app.example.com/cancel',
+      };
+
+      prismaService.user.findUnique.mockResolvedValue(mockUser as any);
+      const timeoutError = new Error('Request timeout');
+      timeoutError.name = 'TimeoutError';
+      stripeMock.customers.create.mockRejectedValue(timeoutError);
+
+      // Act & Assert
+      await expect(service.createCheckoutSession(checkoutData)).rejects.toThrow(
+        InternalServerErrorException
+      );
     });
   });
 });

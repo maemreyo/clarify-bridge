@@ -1,14 +1,16 @@
+// UPDATED: 2025-06-17 - Added comprehensive usage service tests
+
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import { UsageService } from './usage.service';
 import { PrismaService } from '@core/database';
 import { SubscriptionTier } from '@prisma/client';
 import {
+  UsageAction,
   UsageQuota,
   USAGE_QUOTAS,
   UsageStats,
   UsageCheckResult,
-  UsageAction,
 } from './interfaces/usage.interface';
 
 describe('UsageService', () => {
@@ -16,24 +18,27 @@ describe('UsageService', () => {
   let prismaService: jest.Mocked<PrismaService>;
   let configService: jest.Mocked<ConfigService>;
 
+  const mockUserId = 'user-123';
+  const mockTeamId = 'team-456';
+
   const mockUser = {
-    id: 'user-123',
+    id: mockUserId,
     email: 'test@example.com',
     name: 'Test User',
     subscriptionTier: SubscriptionTier.STARTER,
-    generationsCount: 10,
+    generationsCount: 25,
     subscription: {
       id: 'sub-123',
-      tier: SubscriptionTier.STARTER,
+      status: 'active',
     },
   };
 
   const mockTeam = {
-    id: 'team-123',
+    id: mockTeamId,
     name: 'Test Team',
     subscriptionTier: SubscriptionTier.PROFESSIONAL,
+    usageCount: 150,
     usageQuota: null,
-    usageCount: 50,
     _count: {
       members: 5,
     },
@@ -41,11 +46,11 @@ describe('UsageService', () => {
 
   const mockUsageLog = {
     id: 'log-123',
-    userId: 'user-123',
-    teamId: null,
-    action: 'spec_generated',
-    metadata: {},
+    userId: mockUserId,
+    teamId: mockTeamId,
+    action: 'spec_generated' as UsageAction,
     createdAt: new Date(),
+    metadata: {},
   };
 
   beforeEach(async () => {
@@ -58,10 +63,12 @@ describe('UsageService', () => {
             usageLog: {
               create: jest.fn(),
               count: jest.fn(),
+              findMany: jest.fn(),
               groupBy: jest.fn(),
             },
             user: {
               findUnique: jest.fn(),
+              findMany: jest.fn(),
               update: jest.fn(),
             },
             team: {
@@ -83,11 +90,12 @@ describe('UsageService', () => {
     prismaService = module.get(PrismaService);
     configService = module.get(ConfigService);
 
+    // Clear all mocks
     jest.clearAllMocks();
 
-    // Mock date for consistent testing
+    // Set up default system time
     jest.useFakeTimers();
-    jest.setSystemTime(new Date('2024-06-15'));
+    jest.setSystemTime(new Date('2024-06-15T12:00:00.000Z'));
   });
 
   afterEach(() => {
@@ -95,70 +103,156 @@ describe('UsageService', () => {
   });
 
   describe('trackUsage', () => {
-    it('should track usage action successfully', async () => {
+    it('should successfully track usage with all parameters', async () => {
       // Arrange
       prismaService.usageLog.create.mockResolvedValue(mockUsageLog);
+      prismaService.user.update.mockResolvedValue(mockUser as any);
+      prismaService.team.update.mockResolvedValue(mockTeam as any);
 
       // Act
       await service.trackUsage('spec_generated', {
-        userId: 'user-123',
-        teamId: 'team-123',
-        metadata: { specId: 'spec-123' },
+        userId: mockUserId,
+        teamId: mockTeamId,
+        metadata: { specId: 'spec-123', title: 'Test Spec' },
       });
 
       // Assert
       expect(prismaService.usageLog.create).toHaveBeenCalledWith({
         data: {
-          userId: 'user-123',
-          teamId: 'team-123',
+          userId: mockUserId,
+          teamId: mockTeamId,
           action: 'spec_generated',
-          metadata: { specId: 'spec-123' },
+          metadata: { specId: 'spec-123', title: 'Test Spec' },
         },
       });
     });
 
-    it('should increment user generation count for spec_generated', async () => {
+    it('should increment counters for spec_generated action', async () => {
       // Arrange
       prismaService.usageLog.create.mockResolvedValue(mockUsageLog);
-      prismaService.user.update.mockResolvedValue(mockUser);
-      prismaService.team.update.mockResolvedValue(mockTeam);
+      prismaService.user.update.mockResolvedValue(mockUser as any);
+      prismaService.team.update.mockResolvedValue(mockTeam as any);
 
       // Act
       await service.trackUsage('spec_generated', {
-        userId: 'user-123',
-        teamId: 'team-123',
+        userId: mockUserId,
+        teamId: mockTeamId,
       });
 
       // Assert
       expect(prismaService.user.update).toHaveBeenCalledWith({
-        where: { id: 'user-123' },
+        where: { id: mockUserId },
         data: { generationsCount: { increment: 1 } },
       });
+
       expect(prismaService.team.update).toHaveBeenCalledWith({
-        where: { id: 'team-123' },
+        where: { id: mockTeamId },
         data: { usageCount: { increment: 1 } },
       });
     });
 
-    it('should not throw on tracking failure', async () => {
+    it('should not increment counters for non-spec actions', async () => {
       // Arrange
-      prismaService.usageLog.create.mockRejectedValue(new Error('Database error'));
+      prismaService.usageLog.create.mockResolvedValue(mockUsageLog);
 
-      // Act & Assert - should not throw
+      // Act
+      await service.trackUsage('api_call', {
+        userId: mockUserId,
+        teamId: mockTeamId,
+      });
+
+      // Assert
+      expect(prismaService.user.update).not.toHaveBeenCalled();
+      expect(prismaService.team.update).not.toHaveBeenCalled();
+    });
+
+    it('should track usage without userId', async () => {
+      // Arrange
+      prismaService.usageLog.create.mockResolvedValue({
+        ...mockUsageLog,
+        userId: null,
+      });
+
+      // Act
+      await service.trackUsage('api_call', {
+        teamId: mockTeamId,
+        metadata: { source: 'webhook' },
+      });
+
+      // Assert
+      expect(prismaService.usageLog.create).toHaveBeenCalledWith({
+        data: {
+          userId: undefined,
+          teamId: mockTeamId,
+          action: 'api_call',
+          metadata: { source: 'webhook' },
+        },
+      });
+    });
+
+    it('should track usage without teamId', async () => {
+      // Arrange
+      prismaService.usageLog.create.mockResolvedValue({
+        ...mockUsageLog,
+        teamId: null,
+      });
+
+      // Act
+      await service.trackUsage('vector_search', {
+        userId: mockUserId,
+        metadata: { query: 'test search' },
+      });
+
+      // Assert
+      expect(prismaService.usageLog.create).toHaveBeenCalledWith({
+        data: {
+          userId: mockUserId,
+          teamId: undefined,
+          action: 'vector_search',
+          metadata: { query: 'test search' },
+        },
+      });
+    });
+
+    it('should not throw error on tracking failure', async () => {
+      // Arrange
+      const error = new Error('Database connection failed');
+      prismaService.usageLog.create.mockRejectedValue(error);
+      const loggerSpy = jest.spyOn((service as any).logger, 'error').mockImplementation();
+
+      // Act & Assert
       await expect(
-        service.trackUsage('api_call', { userId: 'user-123' }),
+        service.trackUsage('api_call', { userId: mockUserId })
       ).resolves.not.toThrow();
+
+      expect(loggerSpy).toHaveBeenCalledWith('Failed to track usage: Database connection failed');
+    });
+
+    it('should handle counter update failures gracefully', async () => {
+      // Arrange
+      prismaService.usageLog.create.mockResolvedValue(mockUsageLog);
+      prismaService.user.update.mockRejectedValue(new Error('Counter update failed'));
+      const loggerSpy = jest.spyOn((service as any).logger, 'error').mockImplementation();
+
+      // Act
+      await service.trackUsage('spec_generated', { userId: mockUserId });
+
+      // Assert
+      expect(loggerSpy).toHaveBeenCalledWith('Failed to track usage: Counter update failed');
     });
   });
 
   describe('checkUserQuota', () => {
-    it('should allow action when within quota', async () => {
+    beforeEach(() => {
+      prismaService.user.findUnique.mockResolvedValue(mockUser as any);
+    });
+
+    it('should allow action when within quota limits', async () => {
       // Arrange
-      prismaService.user.findUnique.mockResolvedValue(mockUser);
       prismaService.usageLog.count.mockResolvedValue(30); // Under STARTER limit of 50
 
       // Act
-      const result = await service.checkUserQuota('user-123', 'spec_generated');
+      const result = await service.checkUserQuota(mockUserId, 'spec_generated');
 
       // Assert
       expect(result).toEqual({
@@ -171,11 +265,10 @@ describe('UsageService', () => {
 
     it('should deny action when quota exceeded', async () => {
       // Arrange
-      prismaService.user.findUnique.mockResolvedValue(mockUser);
       prismaService.usageLog.count.mockResolvedValue(50); // At STARTER limit
 
       // Act
-      const result = await service.checkUserQuota('user-123', 'spec_generated');
+      const result = await service.checkUserQuota(mockUserId, 'spec_generated');
 
       // Assert
       expect(result).toEqual({
@@ -187,43 +280,28 @@ describe('UsageService', () => {
       });
     });
 
-    it('should allow unlimited usage for ENTERPRISE tier', async () => {
+    it('should allow unlimited for Enterprise tier', async () => {
       // Arrange
       const enterpriseUser = {
         ...mockUser,
         subscriptionTier: SubscriptionTier.ENTERPRISE,
       };
-      prismaService.user.findUnique.mockResolvedValue(enterpriseUser);
+      prismaService.user.findUnique.mockResolvedValue(enterpriseUser as any);
 
       // Act
-      const result = await service.checkUserQuota('user-123', 'spec_generated');
+      const result = await service.checkUserQuota(mockUserId, 'spec_generated');
 
       // Assert
       expect(result).toEqual({ allowed: true });
       expect(prismaService.usageLog.count).not.toHaveBeenCalled();
     });
 
-    it('should return not allowed if user not found', async () => {
+    it('should handle AI generation quota', async () => {
       // Arrange
-      prismaService.user.findUnique.mockResolvedValue(null);
-
-      // Act
-      const result = await service.checkUserQuota('user-123', 'spec_generated');
-
-      // Assert
-      expect(result).toEqual({
-        allowed: false,
-        reason: 'User not found',
-      });
-    });
-
-    it('should check AI generation quota correctly', async () => {
-      // Arrange
-      prismaService.user.findUnique.mockResolvedValue(mockUser);
       prismaService.usageLog.count.mockResolvedValue(150); // Under STARTER limit of 200
 
       // Act
-      const result = await service.checkUserQuota('user-123', 'ai_generation');
+      const result = await service.checkUserQuota(mockUserId, 'ai_generation');
 
       // Assert
       expect(result).toEqual({
@@ -233,36 +311,131 @@ describe('UsageService', () => {
         remaining: 50,
       });
     });
-  });
 
-  describe('checkTeamQuota', () => {
-    it('should allow action when within team quota', async () => {
+    it('should handle view generation quota', async () => {
       // Arrange
-      prismaService.team.findUnique.mockResolvedValue(mockTeam);
-      prismaService.usageLog.count.mockResolvedValue(300); // Under PROFESSIONAL limit of 500
+      prismaService.usageLog.count.mockResolvedValue(200); // At limit
 
       // Act
-      const result = await service.checkTeamQuota('team-123', 'spec_generated');
+      const result = await service.checkUserQuota(mockUserId, 'view_generated');
+
+      // Assert
+      expect(result).toEqual({
+        allowed: false,
+        reason: 'Monthly AI generation limit reached',
+        currentUsage: 200,
+        limit: 200,
+        remaining: 0,
+      });
+    });
+
+    it('should handle storage quota', async () => {
+      // Arrange
+      const userUsage = 800; // MB, under STARTER limit of 1000
+      jest.spyOn(service as any, 'getUserUsageForPeriod').mockResolvedValue({
+        specifications: 10,
+        aiGenerations: 50,
+        teamMembers: 3,
+        storage: userUsage,
+        apiCalls: 500,
+      });
+
+      // Act
+      const result = await service.checkUserQuota(mockUserId, 'file_uploaded');
 
       // Assert
       expect(result).toEqual({
         allowed: true,
-        currentUsage: 300,
-        limit: 500,
+        currentUsage: userUsage,
+        limit: 1000,
         remaining: 200,
       });
     });
 
-    it('should check team member limit correctly', async () => {
+    it('should handle API call quota', async () => {
+      // Arrange
+      prismaService.usageLog.count.mockResolvedValue(9500); // Under limit
+
+      // Act
+      const result = await service.checkUserQuota(mockUserId, 'api_call');
+
+      // Assert
+      expect(result).toEqual({
+        allowed: true,
+        currentUsage: 9500,
+        limit: 10000,
+        remaining: 500,
+      });
+    });
+
+    it('should return error for non-existent user', async () => {
+      // Arrange
+      prismaService.user.findUnique.mockResolvedValue(null);
+
+      // Act
+      const result = await service.checkUserQuota('non-existent', 'spec_generated');
+
+      // Assert
+      expect(result).toEqual({
+        allowed: false,
+        reason: 'User not found',
+      });
+    });
+
+    it('should handle different subscription tiers correctly', async () => {
+      // Test FREE tier
+      const freeUser = { ...mockUser, subscriptionTier: SubscriptionTier.FREE };
+      prismaService.user.findUnique.mockResolvedValue(freeUser as any);
+      prismaService.usageLog.count.mockResolvedValue(3);
+
+      const freeResult = await service.checkUserQuota(mockUserId, 'spec_generated');
+      expect(freeResult.limit).toBe(5); // FREE tier limit
+
+      // Test PROFESSIONAL tier
+      const proUser = { ...mockUser, subscriptionTier: SubscriptionTier.PROFESSIONAL };
+      prismaService.user.findUnique.mockResolvedValue(proUser as any);
+      prismaService.usageLog.count.mockResolvedValue(300);
+
+      const proResult = await service.checkUserQuota(mockUserId, 'spec_generated');
+      expect(proResult.limit).toBe(500); // PROFESSIONAL tier limit
+    });
+  });
+
+  describe('checkTeamQuota', () => {
+    beforeEach(() => {
+      prismaService.team.findUnique.mockResolvedValue(mockTeam as any);
+    });
+
+    it('should check team member quota', async () => {
+      // Arrange
+      const teamWithMembers = {
+        ...mockTeam,
+        _count: { members: 8 }, // Under PROFESSIONAL limit of 50
+      };
+      prismaService.team.findUnique.mockResolvedValue(teamWithMembers as any);
+
+      // Act
+      const result = await service.checkTeamQuota(mockTeamId, 'team_member_added');
+
+      // Assert
+      expect(result).toEqual({
+        allowed: true,
+        currentUsage: 8,
+        limit: 50,
+        remaining: 42,
+      });
+    });
+
+    it('should deny when team member limit reached', async () => {
       // Arrange
       const teamAtLimit = {
         ...mockTeam,
         _count: { members: 50 }, // At PROFESSIONAL limit
       };
-      prismaService.team.findUnique.mockResolvedValue(teamAtLimit);
+      prismaService.team.findUnique.mockResolvedValue(teamAtLimit as any);
 
       // Act
-      const result = await service.checkTeamQuota('team-123', 'team_member_added');
+      const result = await service.checkTeamQuota(mockTeamId, 'team_member_added');
 
       // Assert
       expect(result).toEqual({
@@ -274,33 +447,54 @@ describe('UsageService', () => {
       });
     });
 
-    it('should use custom team quota if set', async () => {
+    it('should use custom team quota when set', async () => {
       // Arrange
       const teamWithCustomQuota = {
         ...mockTeam,
-        usageQuota: 1000, // Custom quota
+        usageQuota: 100, // Custom quota instead of tier default
       };
-      prismaService.team.findUnique.mockResolvedValue(teamWithCustomQuota);
-      prismaService.usageLog.count.mockResolvedValue(800);
+      prismaService.team.findUnique.mockResolvedValue(teamWithCustomQuota as any);
+      jest.spyOn(service as any, 'getTeamUsageForPeriod').mockResolvedValue({
+        specifications: 80,
+        aiGenerations: 400,
+        teamMembers: 10,
+        storage: 5000,
+        apiCalls: 50000,
+      });
 
       // Act
-      const result = await service.checkTeamQuota('team-123', 'spec_generated');
+      const result = await service.checkTeamQuota(mockTeamId, 'spec_generated');
 
       // Assert
       expect(result).toEqual({
         allowed: true,
-        currentUsage: 800,
-        limit: 1000,
-        remaining: 200,
+        currentUsage: 80,
+        limit: 100,
+        remaining: 20,
       });
     });
 
-    it('should return not allowed if team not found', async () => {
+    it('should allow unlimited for Enterprise team', async () => {
+      // Arrange
+      const enterpriseTeam = {
+        ...mockTeam,
+        subscriptionTier: SubscriptionTier.ENTERPRISE,
+      };
+      prismaService.team.findUnique.mockResolvedValue(enterpriseTeam as any);
+
+      // Act
+      const result = await service.checkTeamQuota(mockTeamId, 'spec_generated');
+
+      // Assert
+      expect(result).toEqual({ allowed: true });
+    });
+
+    it('should return error for non-existent team', async () => {
       // Arrange
       prismaService.team.findUnique.mockResolvedValue(null);
 
       // Act
-      const result = await service.checkTeamQuota('team-123', 'spec_generated');
+      const result = await service.checkTeamQuota('non-existent', 'spec_generated');
 
       // Assert
       expect(result).toEqual({
@@ -311,176 +505,188 @@ describe('UsageService', () => {
   });
 
   describe('getUserUsageStats', () => {
-    it('should return usage statistics for current month', async () => {
+    beforeEach(() => {
+      prismaService.user.findUnique.mockResolvedValue(mockUser as any);
+    });
+
+    it('should return user usage statistics for current month', async () => {
       // Arrange
-      prismaService.user.findUnique.mockResolvedValue(mockUser);
-      prismaService.usageLog.count.mockImplementation(async ({ where }) => {
-        const action = where?.action;
-        if (action === 'spec_generated') return 30;
-        if (action?.in?.includes('ai_generation')) return 150;
-        return 0;
-      });
-      prismaService.usageLog.groupBy.mockResolvedValue([]);
+      const mockUsage = {
+        specifications: 25,
+        aiGenerations: 150,
+        teamMembers: 5,
+        storage: 750,
+        apiCalls: 8500,
+      };
+
+      jest.spyOn(service as any, 'getUserUsageForPeriod').mockResolvedValue(mockUsage);
 
       // Act
-      const result = await service.getUserUsageStats('user-123');
+      const stats = await service.getUserUsageStats(mockUserId);
 
       // Assert
-      expect(result).toMatchObject({
+      expect(stats).toEqual({
         period: {
           start: new Date('2024-06-01T00:00:00.000Z'),
           end: new Date('2024-06-30T23:59:59.999Z'),
         },
-        usage: {
-          specifications: 30,
-          aiGenerations: 150,
-          teamMembers: 0,
-          storage: 0,
-          apiCalls: 0,
-        },
+        usage: mockUsage,
         quota: USAGE_QUOTAS[SubscriptionTier.STARTER],
         percentages: {
-          specifications: 60, // 30/50 * 100
-          aiGenerations: 75, // 150/200 * 100
-          teamMembers: 0,
-          storage: 0,
-          apiCalls: 0,
+          specifications: 50, // 25/50
+          aiGenerations: 75, // 150/200
+          teamMembers: 50, // 5/10
+          storage: 75, // 750/1000
+          apiCalls: 85, // 8500/10000
         },
       });
     });
 
-    it('should handle custom date range', async () => {
+    it('should return stats for custom date range', async () => {
       // Arrange
-      prismaService.user.findUnique.mockResolvedValue(mockUser);
-      prismaService.usageLog.count.mockResolvedValue(0);
-      prismaService.usageLog.groupBy.mockResolvedValue([]);
-
       const startDate = new Date('2024-05-01');
       const endDate = new Date('2024-05-31');
+      const mockUsage = {
+        specifications: 10,
+        aiGenerations: 50,
+        teamMembers: 3,
+        storage: 250,
+        apiCalls: 2000,
+      };
+
+      jest.spyOn(service as any, 'getUserUsageForPeriod').mockResolvedValue(mockUsage);
 
       // Act
-      const result = await service.getUserUsageStats('user-123', startDate, endDate);
+      const stats = await service.getUserUsageStats(mockUserId, startDate, endDate);
 
       // Assert
-      expect(result.period.start).toEqual(startDate);
-      expect(result.period.end).toEqual(new Date('2024-05-31T23:59:59.999Z'));
+      expect(stats.period.start).toEqual(startDate);
+      expect(stats.period.end).toEqual(endDate);
+      expect(stats.usage).toEqual(mockUsage);
     });
 
-    it('should throw error if user not found', async () => {
+    it('should handle unlimited quotas in percentage calculation', async () => {
+      // Arrange
+      const enterpriseUser = {
+        ...mockUser,
+        subscriptionTier: SubscriptionTier.ENTERPRISE,
+      };
+      prismaService.user.findUnique.mockResolvedValue(enterpriseUser as any);
+
+      const mockUsage = {
+        specifications: 1000,
+        aiGenerations: 5000,
+        teamMembers: 100,
+        storage: 50000,
+        apiCalls: 100000,
+      };
+
+      jest.spyOn(service as any, 'getUserUsageForPeriod').mockResolvedValue(mockUsage);
+
+      // Act
+      const stats = await service.getUserUsageStats(mockUserId);
+
+      // Assert
+      expect(stats.percentages).toEqual({
+        specifications: 0, // Unlimited
+        aiGenerations: 0,
+        teamMembers: 0,
+        storage: 0,
+        apiCalls: 0,
+      });
+    });
+
+    it('should throw error for non-existent user', async () => {
       // Arrange
       prismaService.user.findUnique.mockResolvedValue(null);
 
       // Act & Assert
-      await expect(service.getUserUsageStats('user-123')).rejects.toThrow('User not found');
+      await expect(service.getUserUsageStats('non-existent')).rejects.toThrow('User not found');
     });
   });
 
   describe('getTeamUsageStats', () => {
+    beforeEach(() => {
+      prismaService.team.findUnique.mockResolvedValue(mockTeam as any);
+    });
+
     it('should return team usage statistics', async () => {
       // Arrange
-      prismaService.team.findUnique.mockResolvedValue(mockTeam);
-      prismaService.usageLog.count.mockImplementation(async ({ where }) => {
-        const action = where?.action;
-        if (action === 'spec_generated') return 300;
-        if (action?.in?.includes('ai_generation')) return 1500;
-        return 0;
-      });
-      prismaService.usageLog.groupBy.mockResolvedValue([]);
-
-      // Act
-      const result = await service.getTeamUsageStats('team-123');
-
-      // Assert
-      expect(result).toMatchObject({
-        usage: {
-          specifications: 300,
-          aiGenerations: 1500,
-          teamMembers: 5,
-          storage: 0,
-          apiCalls: 0,
-        },
-        quota: USAGE_QUOTAS[SubscriptionTier.PROFESSIONAL],
-        percentages: {
-          specifications: 60, // 300/500 * 100
-          aiGenerations: 75, // 1500/2000 * 100
-          teamMembers: 10, // 5/50 * 100
-          storage: 0,
-          apiCalls: 0,
-        },
-      });
-    });
-
-    it('should handle unlimited quotas correctly', async () => {
-      // Arrange
-      const enterpriseTeam = {
-        ...mockTeam,
-        subscriptionTier: SubscriptionTier.ENTERPRISE,
+      const mockUsage = {
+        specifications: 200,
+        aiGenerations: 1000,
+        teamMembers: 15,
+        storage: 5000,
+        apiCalls: 50000,
       };
-      prismaService.team.findUnique.mockResolvedValue(enterpriseTeam);
-      prismaService.usageLog.count.mockResolvedValue(10000);
-      prismaService.usageLog.groupBy.mockResolvedValue([]);
+
+      jest.spyOn(service as any, 'getTeamUsageForPeriod').mockResolvedValue(mockUsage);
 
       // Act
-      const result = await service.getTeamUsageStats('team-123');
+      const stats = await service.getTeamUsageStats(mockTeamId);
 
       // Assert
-      expect(result.percentages.specifications).toBe(0); // Unlimited
-      expect(result.quota.specifications).toBe(-1);
+      expect(stats.usage).toEqual(mockUsage);
+      expect(stats.quota).toEqual(USAGE_QUOTAS[SubscriptionTier.PROFESSIONAL]);
     });
-  });
 
-  describe('resetUserUsage', () => {
-    it('should reset user generation count', async () => {
+    it('should use custom team quota in calculations', async () => {
       // Arrange
-      prismaService.user.update.mockResolvedValue(mockUser);
+      const teamWithCustomQuota = {
+        ...mockTeam,
+        usageQuota: 300,
+      };
+      prismaService.team.findUnique.mockResolvedValue(teamWithCustomQuota as any);
+
+      const mockUsage = {
+        specifications: 150,
+        aiGenerations: 1000,
+        teamMembers: 15,
+        storage: 5000,
+        apiCalls: 50000,
+      };
+
+      jest.spyOn(service as any, 'getTeamUsageForPeriod').mockResolvedValue(mockUsage);
 
       // Act
-      await service.resetUserUsage('user-123');
+      const stats = await service.getTeamUsageStats(mockTeamId);
 
       // Assert
-      expect(prismaService.user.update).toHaveBeenCalledWith({
-        where: { id: 'user-123' },
-        data: { generationsCount: 0 },
-      });
+      expect(stats.quota.specifications).toBe(300); // Custom quota
+      expect(stats.percentages.specifications).toBe(50); // 150/300
     });
-  });
 
-  describe('resetTeamUsage', () => {
-    it('should reset team usage count', async () => {
+    it('should throw error for non-existent team', async () => {
       // Arrange
-      prismaService.team.update.mockResolvedValue(mockTeam);
+      prismaService.team.findUnique.mockResolvedValue(null);
 
-      // Act
-      await service.resetTeamUsage('team-123');
-
-      // Assert
-      expect(prismaService.team.update).toHaveBeenCalledWith({
-        where: { id: 'team-123' },
-        data: { usageCount: 0 },
-      });
+      // Act & Assert
+      await expect(service.getTeamUsageStats('non-existent')).rejects.toThrow('Team not found');
     });
   });
 
-  describe('bulkCheckQuota', () => {
-    it('should check quota for multiple users', async () => {
+  describe('checkMultipleUsersQuota', () => {
+    it('should check quotas for multiple users', async () => {
       // Arrange
       const userIds = ['user-1', 'user-2', 'user-3'];
-      prismaService.user.findUnique
-        .mockResolvedValueOnce({ ...mockUser, id: 'user-1' })
-        .mockResolvedValueOnce({ ...mockUser, id: 'user-2', subscriptionTier: SubscriptionTier.FREE })
-        .mockResolvedValueOnce(null);
+
+      prismaService.user.findMany.mockResolvedValue([
+        { ...mockUser, id: 'user-1', subscriptionTier: SubscriptionTier.FREE },
+        { ...mockUser, id: 'user-2', subscriptionTier: SubscriptionTier.STARTER },
+        // user-3 not found
+      ] as any);
 
       prismaService.usageLog.count
-        .mockResolvedValueOnce(30) // user-1
-        .mockResolvedValueOnce(5); // user-2 (at FREE limit)
+        .mockResolvedValueOnce(3) // user-1: under FREE limit of 5
+        .mockResolvedValueOnce(50); // user-2: at STARTER limit of 50
 
       // Act
-      const results = await service.bulkCheckQuota(userIds, 'spec_generated');
+      const results = await service.checkMultipleUsersQuota(userIds, 'spec_generated');
 
       // Assert
       expect(results).toEqual({
-        'user-1': { allowed: true, currentUsage: 30, limit: 50, remaining: 20 },
-        'user-2': { allowed: false, reason: 'Monthly specification limit reached', currentUsage: 5, limit: 5, remaining: 0 },
+        'user-1': { allowed: true, currentUsage: 3, limit: 5, remaining: 2 },
+        'user-2': { allowed: false, reason: 'Monthly specification limit reached', currentUsage: 50, limit: 50, remaining: 0 },
         'user-3': { allowed: false, reason: 'User not found' },
       });
     });
@@ -488,7 +694,6 @@ describe('UsageService', () => {
 
   describe('getQuotaForTier', () => {
     it('should return correct quota for each tier', () => {
-      // Act & Assert
       expect(service.getQuotaForTier(SubscriptionTier.FREE)).toEqual(USAGE_QUOTAS.FREE);
       expect(service.getQuotaForTier(SubscriptionTier.STARTER)).toEqual(USAGE_QUOTAS.STARTER);
       expect(service.getQuotaForTier(SubscriptionTier.PROFESSIONAL)).toEqual(USAGE_QUOTAS.PROFESSIONAL);
@@ -496,20 +701,90 @@ describe('UsageService', () => {
     });
   });
 
-  describe('edge cases', () => {
+  describe('utility methods', () => {
+    it('should calculate current month range correctly', () => {
+      // Act
+      const range = (service as any).getCurrentMonthRange();
+
+      // Assert
+      expect(range.start).toEqual(new Date('2024-06-01T00:00:00.000Z'));
+      expect(range.end).toEqual(new Date('2024-06-30T23:59:59.999Z'));
+    });
+
+    it('should calculate custom period range', () => {
+      // Arrange
+      const startDate = new Date('2024-05-15');
+      const endDate = new Date('2024-05-20');
+
+      // Act
+      const range = (service as any).getPeriodRange(startDate, endDate);
+
+      // Assert
+      expect(range.start).toEqual(startDate);
+      expect(range.end).toEqual(endDate);
+    });
+
+    it('should calculate usage percentages correctly', () => {
+      // Arrange
+      const usage = {
+        specifications: 25,
+        aiGenerations: 100,
+        teamMembers: 5,
+        storage: 500,
+        apiCalls: 7500,
+      };
+      const quota = USAGE_QUOTAS[SubscriptionTier.STARTER];
+
+      // Act
+      const percentages = (service as any).calculateUsagePercentages(usage, quota);
+
+      // Assert
+      expect(percentages).toEqual({
+        specifications: 50, // 25/50
+        aiGenerations: 50, // 100/200
+        teamMembers: 50, // 5/10
+        storage: 50, // 500/1000
+        apiCalls: 75, // 7500/10000
+      });
+    });
+
+    it('should handle unlimited quotas in percentage calculation', () => {
+      // Arrange
+      const usage = {
+        specifications: 1000,
+        aiGenerations: 5000,
+        teamMembers: 100,
+        storage: 50000,
+        apiCalls: 100000,
+      };
+      const quota = USAGE_QUOTAS[SubscriptionTier.ENTERPRISE];
+
+      // Act
+      const percentages = (service as any).calculateUsagePercentages(usage, quota);
+
+      // Assert
+      expect(percentages).toEqual({
+        specifications: 0,
+        aiGenerations: 0,
+        teamMembers: 0,
+        storage: 0,
+        apiCalls: 0,
+      });
+    });
+  });
+
+  describe('edge cases and error handling', () => {
     it('should handle concurrent usage tracking', async () => {
       // Arrange
       prismaService.usageLog.create.mockResolvedValue(mockUsageLog);
 
       // Act
-      const promises = Array(10)
-        .fill(null)
-        .map((_, i) =>
-          service.trackUsage('api_call', {
-            userId: `user-${i}`,
-            metadata: { index: i },
-          }),
-        );
+      const promises = Array.from({ length: 10 }, (_, i) =>
+        service.trackUsage('api_call', {
+          userId: `user-${i}`,
+          metadata: { index: i },
+        })
+      );
 
       await Promise.all(promises);
 
@@ -517,16 +792,14 @@ describe('UsageService', () => {
       expect(prismaService.usageLog.create).toHaveBeenCalledTimes(10);
     });
 
-    it('should handle date boundaries correctly', async () => {
-      // Arrange
-      // Set time to end of month
+    it('should handle month boundary correctly', async () => {
+      // Arrange - Set time to end of month
       jest.setSystemTime(new Date('2024-06-30T23:59:59.999Z'));
-
-      prismaService.user.findUnique.mockResolvedValue(mockUser);
+      prismaService.user.findUnique.mockResolvedValue(mockUser as any);
       prismaService.usageLog.count.mockResolvedValue(49);
 
       // Act
-      const result = await service.checkUserQuota('user-123', 'spec_generated');
+      const result = await service.checkUserQuota(mockUserId, 'spec_generated');
 
       // Assert
       expect(result.allowed).toBe(true);
@@ -540,11 +813,11 @@ describe('UsageService', () => {
         subscription: null,
         subscriptionTier: SubscriptionTier.FREE,
       };
-      prismaService.user.findUnique.mockResolvedValue(userWithoutSubscription);
+      prismaService.user.findUnique.mockResolvedValue(userWithoutSubscription as any);
       prismaService.usageLog.count.mockResolvedValue(3);
 
       // Act
-      const result = await service.checkUserQuota('user-123', 'spec_generated');
+      const result = await service.checkUserQuota(mockUserId, 'spec_generated');
 
       // Assert
       expect(result).toEqual({
@@ -553,6 +826,14 @@ describe('UsageService', () => {
         limit: 5,
         remaining: 2,
       });
+    });
+
+    it('should handle database errors gracefully in quota checks', async () => {
+      // Arrange
+      prismaService.user.findUnique.mockRejectedValue(new Error('Database error'));
+
+      // Act & Assert
+      await expect(service.checkUserQuota(mockUserId, 'spec_generated')).rejects.toThrow('Database error');
     });
   });
 });

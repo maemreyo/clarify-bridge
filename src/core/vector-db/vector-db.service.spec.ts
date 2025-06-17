@@ -1,70 +1,51 @@
+// UPDATED: 2025-06-17 - Added comprehensive vector database service tests
+
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import { VectorDbService } from './vector-db.service';
 import { PrismaService } from '@core/database';
-import { LlmCoreService } from '@core/llm';
 import { PineconeProvider } from './providers/pinecone.provider';
 import { MemoryVectorProvider } from './providers/memory.provider';
 import {
   VectorDocument,
-  VectorSearchOptions,
   VectorSearchResult,
-  VectorMetadata,
+  VectorSearchOptions,
 } from './interfaces/vector-provider.interface';
+
+interface KnowledgeDocument {
+  title?: string;
+  content: string;
+  type: 'specification' | 'context' | 'knowledge' | 'template';
+  userId?: string;
+  teamId?: string;
+  specificationId?: string;
+  tags?: string[];
+  metadata?: Record<string, any>;
+}
 
 describe('VectorDbService', () => {
   let service: VectorDbService;
-  let prismaService: jest.Mocked<PrismaService>;
-  let llmService: jest.Mocked<LlmCoreService>;
   let configService: jest.Mocked<ConfigService>;
+  let prismaService: jest.Mocked<PrismaService>;
   let pineconeProvider: jest.Mocked<PineconeProvider>;
   let memoryProvider: jest.Mocked<MemoryVectorProvider>;
 
-  const mockEmbedding = {
-    embedding: [0.1, 0.2, 0.3, 0.4, 0.5],
-    model: 'text-embedding-ada-002',
-    provider: 'OpenAI',
-  };
+  const mockUserId = 'user-123';
+  const mockTeamId = 'team-456';
+  const mockSpecId = 'spec-789';
 
-  const mockDocument: VectorDocument = {
-    id: 'doc-123',
-    content: 'Test document content',
-    embedding: mockEmbedding.embedding,
+  const mockSearchResult: VectorSearchResult = {
+    id: 'vec-123',
+    score: 0.95,
     metadata: {
-      id: 'doc-123',
+      id: 'vec-123',
       type: 'specification',
-      userId: 'user-123',
-      teamId: 'team-123',
-      specificationId: 'spec-123',
+      userId: mockUserId,
+      teamId: mockTeamId,
       title: 'Test Specification',
       createdAt: new Date(),
     },
-  };
-
-  const mockSearchResult: VectorSearchResult = {
-    id: 'doc-123',
-    score: 0.95,
-    metadata: mockDocument.metadata,
-    content: mockDocument.content,
-  };
-
-  const mockSpecification = {
-    id: 'spec-123',
-    title: 'Test Spec',
-    description: 'Test description',
-    author: {
-      id: 'user-123',
-      name: 'Test User',
-    },
-    versions: [
-      {
-        id: 'version-123',
-        version: 1,
-        pmView: { content: 'PM view content' },
-        frontendView: { content: 'Frontend view content' },
-        backendView: { content: 'Backend view content' },
-      },
-    ],
+    content: 'Test specification content',
   };
 
   beforeEach(async () => {
@@ -72,27 +53,23 @@ describe('VectorDbService', () => {
       providers: [
         VectorDbService,
         {
-          provide: PrismaService,
-          useValue: {
-            specification: {
-              findUnique: jest.fn(),
-            },
-            usageLog: {
-              create: jest.fn(),
-            },
-          },
-        },
-        {
-          provide: LlmCoreService,
-          useValue: {
-            generateEmbedding: jest.fn(),
-            generateEmbeddings: jest.fn(),
-          },
-        },
-        {
           provide: ConfigService,
           useValue: {
             get: jest.fn(),
+          },
+        },
+        {
+          provide: PrismaService,
+          useValue: {
+            usageLog: {
+              create: jest.fn(),
+            },
+            specification: {
+              findUnique: jest.fn(),
+            },
+            specificationVersion: {
+              findMany: jest.fn(),
+            },
           },
         },
         {
@@ -100,13 +77,13 @@ describe('VectorDbService', () => {
           useValue: {
             name: 'pinecone',
             initialize: jest.fn(),
-            isAvailable: jest.fn(),
             upsert: jest.fn(),
             search: jest.fn(),
             searchByText: jest.fn(),
             delete: jest.fn(),
             deleteByFilter: jest.fn(),
             fetch: jest.fn(),
+            isAvailable: jest.fn(),
           },
         },
         {
@@ -114,527 +91,812 @@ describe('VectorDbService', () => {
           useValue: {
             name: 'memory',
             initialize: jest.fn(),
-            isAvailable: jest.fn(),
             upsert: jest.fn(),
             search: jest.fn(),
             searchByText: jest.fn(),
             delete: jest.fn(),
             deleteByFilter: jest.fn(),
             fetch: jest.fn(),
+            isAvailable: jest.fn(),
           },
         },
       ],
     }).compile();
 
     service = module.get<VectorDbService>(VectorDbService);
-    prismaService = module.get(PrismaService);
-    llmService = module.get(LlmCoreService);
     configService = module.get(ConfigService);
+    prismaService = module.get(PrismaService);
     pineconeProvider = module.get(PineconeProvider);
     memoryProvider = module.get(MemoryVectorProvider);
 
-    // Default configuration
-    configService.get.mockImplementation((key: string) => {
-      if (key === 'VECTOR_DB_PROVIDER') return 'pinecone';
-      return null;
-    });
-
+    // Clear all mocks
     jest.clearAllMocks();
   });
 
-  describe('onModuleInit', () => {
-    it('should initialize pinecone provider when configured', async () => {
+  describe('onModuleInit - Provider Selection', () => {
+    it('should use Pinecone provider when configured and available', async () => {
       // Arrange
+      configService.get.mockReturnValue('pinecone');
       pineconeProvider.isAvailable.mockResolvedValue(true);
+      pineconeProvider.initialize.mockResolvedValue(undefined);
 
       // Act
       await service.onModuleInit();
 
       // Assert
-      expect(pineconeProvider.initialize).toHaveBeenCalled();
+      expect(configService.get).toHaveBeenCalledWith('VECTOR_DB_PROVIDER', 'memory');
       expect(pineconeProvider.isAvailable).toHaveBeenCalled();
+      expect(pineconeProvider.initialize).toHaveBeenCalled();
+      expect((service as any).provider).toBe(pineconeProvider);
     });
 
-    it('should fallback to memory provider if pinecone not available', async () => {
+    it('should fallback to memory provider when Pinecone unavailable', async () => {
       // Arrange
+      configService.get.mockReturnValue('pinecone');
       pineconeProvider.isAvailable.mockResolvedValue(false);
-      memoryProvider.isAvailable.mockResolvedValue(true);
+      memoryProvider.initialize.mockResolvedValue(undefined);
+      const loggerSpy = jest.spyOn((service as any).logger, 'warn').mockImplementation();
 
       // Act
       await service.onModuleInit();
 
       // Assert
+      expect(pineconeProvider.isAvailable).toHaveBeenCalled();
       expect(memoryProvider.initialize).toHaveBeenCalled();
+      expect((service as any).provider).toBe(memoryProvider);
+      expect(loggerSpy).toHaveBeenCalledWith(
+        'Pinecone not available, falling back to memory provider'
+      );
     });
 
-    it('should use memory provider when configured', async () => {
+    it('should use memory provider when configured as default', async () => {
       // Arrange
       configService.get.mockReturnValue('memory');
-      memoryProvider.isAvailable.mockResolvedValue(true);
+      memoryProvider.initialize.mockResolvedValue(undefined);
 
       // Act
       await service.onModuleInit();
 
       // Assert
       expect(memoryProvider.initialize).toHaveBeenCalled();
-      expect(pineconeProvider.initialize).not.toHaveBeenCalled();
+      expect((service as any).provider).toBe(memoryProvider);
+      expect(pineconeProvider.isAvailable).not.toHaveBeenCalled();
     });
 
-    it('should handle initialization failure gracefully', async () => {
+    it('should default to memory provider for unknown configuration', async () => {
       // Arrange
-      pineconeProvider.isAvailable.mockResolvedValue(true);
-      pineconeProvider.initialize.mockRejectedValue(new Error('Init failed'));
+      configService.get.mockReturnValue('unknown-provider');
+      memoryProvider.initialize.mockResolvedValue(undefined);
 
-      // Act & Assert - should not throw
-      await expect(service.onModuleInit()).resolves.not.toThrow();
+      // Act
+      await service.onModuleInit();
+
+      // Assert
+      expect(memoryProvider.initialize).toHaveBeenCalled();
+      expect((service as any).provider).toBe(memoryProvider);
+    });
+
+    it('should log the selected provider', async () => {
+      // Arrange
+      configService.get.mockReturnValue('memory');
+      memoryProvider.initialize.mockResolvedValue(undefined);
+      const loggerSpy = jest.spyOn((service as any).logger, 'log').mockImplementation();
+
+      // Act
+      await service.onModuleInit();
+
+      // Assert
+      expect(loggerSpy).toHaveBeenCalledWith('Using vector provider: memory');
     });
   });
 
   describe('storeDocument', () => {
     beforeEach(async () => {
-      pineconeProvider.isAvailable.mockResolvedValue(true);
+      configService.get.mockReturnValue('memory');
+      memoryProvider.initialize.mockResolvedValue(undefined);
       await service.onModuleInit();
     });
 
-    it('should store document with generated embedding', async () => {
+    it('should store a knowledge document successfully', async () => {
       // Arrange
-      const document = {
+      const document: KnowledgeDocument = {
         title: 'Test Document',
-        content: 'Test content',
-        type: 'specification' as const,
-        userId: 'user-123',
-        teamId: 'team-123',
-        specificationId: 'spec-123',
+        content: 'This is test content for knowledge storage',
+        type: 'knowledge',
+        userId: mockUserId,
+        teamId: mockTeamId,
+        tags: ['testing', 'knowledge'],
+        metadata: { category: 'technical' },
       };
-      llmService.generateEmbedding.mockResolvedValue(mockEmbedding);
-      pineconeProvider.upsert.mockResolvedValue(undefined);
+
+      memoryProvider.upsert.mockResolvedValue(undefined);
+      prismaService.usageLog.create.mockResolvedValue({} as any);
 
       // Act
       const result = await service.storeDocument(document);
 
       // Assert
-      expect(llmService.generateEmbedding).toHaveBeenCalledWith(
-        `${document.title}\n\n${document.content}`,
-      );
-      expect(pineconeProvider.upsert).toHaveBeenCalledWith([
+      expect(memoryProvider.upsert).toHaveBeenCalledWith([
         expect.objectContaining({
-          id: expect.stringMatching(/^spe_/),
+          id: expect.stringMatching(/^kno_/), // Generated ID with knowledge prefix
           content: document.content,
-          embedding: mockEmbedding.embedding,
           metadata: expect.objectContaining({
-            type: document.type,
-            userId: document.userId,
-            teamId: document.teamId,
-            title: document.title,
+            type: 'knowledge',
+            userId: mockUserId,
+            teamId: mockTeamId,
+            title: 'Test Document',
+            tags: ['testing', 'knowledge'],
+            category: 'technical',
+            createdAt: expect.any(Date),
           }),
         }),
       ]);
+
+      expect(prismaService.usageLog.create).toHaveBeenCalledWith({
+        data: {
+          userId: mockUserId,
+          teamId: mockTeamId,
+          action: 'vector_stored',
+          metadata: { documentId: result, type: 'knowledge' },
+        },
+      });
+
+      expect(result).toMatch(/^kno_/);
+    });
+
+    it('should store specification document without optional fields', async () => {
+      // Arrange
+      const document: KnowledgeDocument = {
+        content: 'Minimal specification content',
+        type: 'specification',
+        specificationId: mockSpecId,
+      };
+
+      memoryProvider.upsert.mockResolvedValue(undefined);
+
+      // Act
+      const result = await service.storeDocument(document);
+
+      // Assert
+      expect(memoryProvider.upsert).toHaveBeenCalledWith([
+        expect.objectContaining({
+          content: 'Minimal specification content',
+          metadata: expect.objectContaining({
+            type: 'specification',
+            specificationId: mockSpecId,
+            userId: undefined,
+            teamId: undefined,
+            title: undefined,
+            tags: undefined,
+          }),
+        }),
+      ]);
+
+      expect(prismaService.usageLog.create).not.toHaveBeenCalled();
       expect(result).toMatch(/^spe_/);
     });
 
-    it('should handle missing optional fields', async () => {
+    it('should handle context documents with attachments', async () => {
       // Arrange
-      const minimalDocument = {
-        content: 'Content only',
-        type: 'knowledge' as const,
+      const document: KnowledgeDocument = {
+        title: 'Context with Attachments',
+        content: 'Context content with file references',
+        type: 'context',
+        userId: mockUserId,
+        teamId: mockTeamId,
+        specificationId: mockSpecId,
+        metadata: {
+          hasAttachments: true,
+          attachmentCount: 3,
+          attachmentTypes: ['pdf', 'docx', 'image'],
+        },
       };
-      llmService.generateEmbedding.mockResolvedValue(mockEmbedding);
+
+      memoryProvider.upsert.mockResolvedValue(undefined);
 
       // Act
-      await service.storeDocument(minimalDocument);
+      const result = await service.storeDocument(document);
 
       // Assert
-      expect(llmService.generateEmbedding).toHaveBeenCalledWith('Content only');
-      expect(pineconeProvider.upsert).toHaveBeenCalledWith([
+      expect(memoryProvider.upsert).toHaveBeenCalledWith([
         expect.objectContaining({
-          content: minimalDocument.content,
           metadata: expect.objectContaining({
-            type: minimalDocument.type,
+            type: 'context',
+            hasAttachments: true,
+            attachmentCount: 3,
+            attachmentTypes: ['pdf', 'docx', 'image'],
           }),
         }),
       ]);
+
+      expect(result).toMatch(/^con_/);
+    });
+
+    it('should handle template documents', async () => {
+      // Arrange
+      const document: KnowledgeDocument = {
+        title: 'Template Document',
+        content: 'Template content for reuse',
+        type: 'template',
+        teamId: mockTeamId,
+        tags: ['template', 'reusable'],
+      };
+
+      memoryProvider.upsert.mockResolvedValue(undefined);
+
+      // Act
+      const result = await service.storeDocument(document);
+
+      // Assert
+      expect(result).toMatch(/^tem_/);
+    });
+
+    it('should handle provider upsert failure', async () => {
+      // Arrange
+      const document: KnowledgeDocument = {
+        content: 'Test content',
+        type: 'knowledge',
+      };
+
+      const error = new Error('Vector storage failed');
+      memoryProvider.upsert.mockRejectedValue(error);
+
+      // Act & Assert
+      await expect(service.storeDocument(document)).rejects.toThrow('Vector storage failed');
+      expect(prismaService.usageLog.create).not.toHaveBeenCalled();
     });
   });
 
   describe('storeDocuments', () => {
     beforeEach(async () => {
-      pineconeProvider.isAvailable.mockResolvedValue(true);
+      configService.get.mockReturnValue('memory');
+      memoryProvider.initialize.mockResolvedValue(undefined);
       await service.onModuleInit();
     });
 
-    it('should store multiple documents in batch', async () => {
+    it('should store multiple documents successfully', async () => {
       // Arrange
-      const documents = [
-        { content: 'Doc 1', type: 'specification' as const },
-        { content: 'Doc 2', type: 'context' as const },
+      const documents: KnowledgeDocument[] = [
+        {
+          title: 'Doc 1',
+          content: 'Content 1',
+          type: 'knowledge',
+          userId: mockUserId,
+        },
+        {
+          title: 'Doc 2',
+          content: 'Content 2',
+          type: 'specification',
+          teamId: mockTeamId,
+        },
+        {
+          title: 'Doc 3',
+          content: 'Content 3',
+          type: 'context',
+          userId: mockUserId,
+          teamId: mockTeamId,
+        },
       ];
-      llmService.generateEmbeddings.mockResolvedValue([mockEmbedding, mockEmbedding]);
+
+      memoryProvider.upsert.mockResolvedValue(undefined);
 
       // Act
-      const result = await service.storeDocuments(documents);
+      const results = await service.storeDocuments(documents);
 
       // Assert
-      expect(llmService.generateEmbeddings).toHaveBeenCalledWith(['Doc 1', 'Doc 2']);
-      expect(pineconeProvider.upsert).toHaveBeenCalledWith(
+      expect(memoryProvider.upsert).toHaveBeenCalledWith(
         expect.arrayContaining([
-          expect.objectContaining({ content: 'Doc 1' }),
-          expect.objectContaining({ content: 'Doc 2' }),
-        ]),
+          expect.objectContaining({ content: 'Content 1' }),
+          expect.objectContaining({ content: 'Content 2' }),
+          expect.objectContaining({ content: 'Content 3' }),
+        ])
       );
-      expect(result).toHaveLength(2);
+
+      expect(results).toHaveLength(3);
+      expect(results[0]).toMatch(/^kno_/);
+      expect(results[1]).toMatch(/^spe_/);
+      expect(results[2]).toMatch(/^con_/);
     });
 
     it('should handle empty document array', async () => {
-      // Act
-      const result = await service.storeDocuments([]);
-
-      // Assert
-      expect(llmService.generateEmbeddings).not.toHaveBeenCalled();
-      expect(pineconeProvider.upsert).not.toHaveBeenCalled();
-      expect(result).toEqual([]);
-    });
-  });
-
-  describe('storeContext', () => {
-    beforeEach(async () => {
-      pineconeProvider.isAvailable.mockResolvedValue(true);
-      await service.onModuleInit();
-    });
-
-    it('should store specification context', async () => {
       // Arrange
-      const context = {
-        requirements: 'User requirements',
-        attachments: ['file1.pdf', 'file2.doc'],
-        references: ['https://example.com'],
-      };
-      llmService.generateEmbedding.mockResolvedValue(mockEmbedding);
+      const documents: KnowledgeDocument[] = [];
+      memoryProvider.upsert.mockResolvedValue(undefined);
 
       // Act
-      const result = await service.storeContext('spec-123', 'user-123', 'team-123', context);
+      const results = await service.storeDocuments(documents);
 
       // Assert
-      expect(llmService.generateEmbedding).toHaveBeenCalledWith(
-        expect.stringContaining('Requirements:\nUser requirements'),
-      );
-      expect(pineconeProvider.upsert).toHaveBeenCalledWith([
-        expect.objectContaining({
-          metadata: expect.objectContaining({
-            type: 'context',
-            specificationId: 'spec-123',
-            hasAttachments: true,
-            attachmentCount: 2,
-          }),
-        }),
-      ]);
-      expect(result).toMatch(/^con_/);
+      expect(memoryProvider.upsert).toHaveBeenCalledWith([]);
+      expect(results).toHaveLength(0);
     });
   });
 
   describe('searchSimilar', () => {
     beforeEach(async () => {
-      pineconeProvider.isAvailable.mockResolvedValue(true);
+      configService.get.mockReturnValue('memory');
+      memoryProvider.initialize.mockResolvedValue(undefined);
       await service.onModuleInit();
     });
 
     it('should search similar documents by text', async () => {
       // Arrange
-      const query = 'test query';
-      const options = {
+      const query = 'test query for similarity search';
+      const options: VectorSearchOptions & { userId?: string; teamId?: string } = {
         topK: 5,
-        userId: 'user-123',
-        teamId: 'team-123',
+        userId: mockUserId,
+        teamId: mockTeamId,
       };
-      pineconeProvider.searchByText.mockResolvedValue([mockSearchResult]);
+
+      memoryProvider.searchByText.mockResolvedValue([mockSearchResult]);
+      prismaService.usageLog.create.mockResolvedValue({} as any);
 
       // Act
       const results = await service.searchSimilar(query, options);
 
       // Assert
-      expect(pineconeProvider.searchByText).toHaveBeenCalledWith(query, {
+      expect(memoryProvider.searchByText).toHaveBeenCalledWith(query, {
         topK: 5,
         filter: {
-          userId: 'user-123',
-          teamId: 'team-123',
+          userId: mockUserId,
+          teamId: mockTeamId,
         },
       });
+
       expect(prismaService.usageLog.create).toHaveBeenCalledWith({
         data: {
-          userId: 'user-123',
-          teamId: 'team-123',
+          userId: mockUserId,
+          teamId: mockTeamId,
           action: 'vector_search',
           metadata: { query, resultsCount: 1 },
         },
       });
+
       expect(results).toEqual([mockSearchResult]);
     });
 
-    it('should handle search with type filter', async () => {
+    it('should search with type filter', async () => {
       // Arrange
+      const query = 'specification content';
       const options = {
         type: ['specification', 'context'],
+        topK: 10,
       };
-      pineconeProvider.searchByText.mockResolvedValue([]);
+
+      memoryProvider.searchByText.mockResolvedValue([mockSearchResult]);
 
       // Act
-      await service.searchSimilar('query', options);
+      const results = await service.searchSimilar(query, options);
 
       // Assert
-      expect(pineconeProvider.searchByText).toHaveBeenCalledWith('query', {
+      expect(memoryProvider.searchByText).toHaveBeenCalledWith(query, {
+        topK: 10,
         filter: {
           type: ['specification', 'context'],
+        },
+      });
+
+      expect(results).toEqual([mockSearchResult]);
+    });
+
+    it('should search with single type filter', async () => {
+      // Arrange
+      const query = 'knowledge search';
+      const options = {
+        type: 'knowledge',
+        userId: mockUserId,
+      };
+
+      memoryProvider.searchByText.mockResolvedValue([]);
+
+      // Act
+      await service.searchSimilar(query, options);
+
+      // Assert
+      expect(memoryProvider.searchByText).toHaveBeenCalledWith(query, {
+        filter: {
+          type: 'knowledge',
+          userId: mockUserId,
         },
       });
     });
 
     it('should not track usage when no user/team provided', async () => {
       // Arrange
-      pineconeProvider.searchByText.mockResolvedValue([]);
+      const query = 'anonymous search';
+      memoryProvider.searchByText.mockResolvedValue([]);
 
       // Act
-      await service.searchSimilar('query');
+      await service.searchSimilar(query);
 
       // Assert
       expect(prismaService.usageLog.create).not.toHaveBeenCalled();
+      expect(memoryProvider.searchByText).toHaveBeenCalledWith(query, {});
+    });
+
+    it('should handle search errors gracefully', async () => {
+      // Arrange
+      const query = 'error search';
+      const error = new Error('Search service unavailable');
+      memoryProvider.searchByText.mockRejectedValue(error);
+
+      // Act & Assert
+      await expect(service.searchSimilar(query)).rejects.toThrow('Search service unavailable');
+      expect(prismaService.usageLog.create).not.toHaveBeenCalled();
+    });
+
+    it('should handle empty search results', async () => {
+      // Arrange
+      const query = 'no results query';
+      memoryProvider.searchByText.mockResolvedValue([]);
+      prismaService.usageLog.create.mockResolvedValue({} as any);
+
+      // Act
+      const results = await service.searchSimilar(query, { userId: mockUserId });
+
+      // Assert
+      expect(results).toEqual([]);
+      expect(prismaService.usageLog.create).toHaveBeenCalledWith({
+        data: {
+          userId: mockUserId,
+          teamId: undefined,
+          action: 'vector_search',
+          metadata: { query, resultsCount: 0 },
+        },
+      });
     });
   });
 
   describe('getRelatedSpecifications', () => {
     beforeEach(async () => {
-      pineconeProvider.isAvailable.mockResolvedValue(true);
+      configService.get.mockReturnValue('memory');
+      memoryProvider.initialize.mockResolvedValue(undefined);
       await service.onModuleInit();
     });
 
-    it('should find related specifications', async () => {
+    it('should get related specifications by ID', async () => {
       // Arrange
-      pineconeProvider.fetch.mockResolvedValue([mockDocument]);
-      pineconeProvider.search.mockResolvedValue([
-        { ...mockSearchResult, id: 'spec-456', metadata: { ...mockSearchResult.metadata, specificationId: 'spec-456' } },
-        { ...mockSearchResult, id: 'spec-789', metadata: { ...mockSearchResult.metadata, specificationId: 'spec-789' } },
-      ]);
+      const specificationId = mockSpecId;
+      const options = { limit: 5, teamId: mockTeamId };
+
+      const mockSpec = {
+        id: specificationId,
+        title: 'Source Specification',
+        description: 'Source spec description',
+        versions: [
+          {
+            id: 'ver-1',
+            pmView: { overview: 'PM overview' },
+            frontendView: { framework: 'React' },
+            backendView: { architecture: 'Microservices' },
+          },
+        ],
+      };
+
+      prismaService.specification.findUnique.mockResolvedValue(mockSpec as any);
+      memoryProvider.searchByText.mockResolvedValue([mockSearchResult]);
 
       // Act
-      const results = await service.getRelatedSpecifications('spec-123', { limit: 5 });
-
-      // Assert
-      expect(pineconeProvider.fetch).toHaveBeenCalledWith(['spec-123']);
-      expect(pineconeProvider.search).toHaveBeenCalledWith(
-        mockEmbedding.embedding,
-        expect.objectContaining({
-          topK: 6, // limit + 1
-          filter: expect.objectContaining({
-            type: 'specification',
-          }),
-        }),
-      );
-      expect(results).toEqual(['spec-456', 'spec-789']);
-    });
-
-    it('should filter by teamId if provided', async () => {
-      // Arrange
-      pineconeProvider.fetch.mockResolvedValue([mockDocument]);
-      pineconeProvider.search.mockResolvedValue([]);
-
-      // Act
-      await service.getRelatedSpecifications('spec-123', { teamId: 'team-123' });
-
-      // Assert
-      expect(pineconeProvider.search).toHaveBeenCalledWith(
-        mockEmbedding.embedding,
-        expect.objectContaining({
-          filter: expect.objectContaining({
-            teamId: 'team-123',
-          }),
-        }),
-      );
-    });
-
-    it('should return empty array if document not found', async () => {
-      // Arrange
-      pineconeProvider.fetch.mockResolvedValue([]);
-
-      // Act
-      const results = await service.getRelatedSpecifications('non-existent');
-
-      // Assert
-      expect(results).toEqual([]);
-      expect(pineconeProvider.search).not.toHaveBeenCalled();
-    });
-  });
-
-  describe('storeSpecificationVersion', () => {
-    beforeEach(async () => {
-      pineconeProvider.isAvailable.mockResolvedValue(true);
-      await service.onModuleInit();
-    });
-
-    it('should store specification version with all views', async () => {
-      // Arrange
-      prismaService.specification.findUnique.mockResolvedValue(mockSpecification);
-      llmService.generateEmbedding.mockResolvedValue(mockEmbedding);
-
-      // Act
-      const result = await service.storeSpecificationVersion('spec-123', 1);
+      const results = await service.getRelatedSpecifications(specificationId, options);
 
       // Assert
       expect(prismaService.specification.findUnique).toHaveBeenCalledWith({
-        where: { id: 'spec-123' },
-        include: {
-          author: true,
-          versions: {
-            where: { version: 1 },
-            take: 1,
-          },
-        },
+        where: { id: specificationId },
+        include: { versions: { orderBy: { createdAt: 'desc' }, take: 1 } },
       });
-      expect(llmService.generateEmbedding).toHaveBeenCalledWith(
-        expect.stringContaining('PM view content'),
-      );
-      expect(pineconeProvider.upsert).toHaveBeenCalledWith([
-        expect.objectContaining({
-          metadata: expect.objectContaining({
+
+      expect(memoryProvider.searchByText).toHaveBeenCalledWith(
+        expect.stringContaining('PM overview'),
+        {
+          topK: 5,
+          filter: {
             type: 'specification',
-            specificationId: 'spec-123',
-            version: 1,
-            authorName: 'Test User',
-          }),
-        }),
-      ]);
-      expect(result).toMatch(/^spe_/);
+            teamId: mockTeamId,
+          },
+        }
+      );
+
+      expect(results).toEqual([mockSearchResult]);
     });
 
-    it('should handle missing specification', async () => {
+    it('should handle specification not found', async () => {
       // Arrange
+      const specificationId = 'non-existent-spec';
       prismaService.specification.findUnique.mockResolvedValue(null);
 
-      // Act & Assert
-      await expect(service.storeSpecificationVersion('non-existent', 1)).rejects.toThrow(
-        'Specification not found',
-      );
+      // Act
+      const results = await service.getRelatedSpecifications(specificationId);
+
+      // Assert
+      expect(results).toEqual([]);
+      expect(memoryProvider.searchByText).not.toHaveBeenCalled();
     });
 
-    it('should handle missing version', async () => {
+    it('should handle specification without versions', async () => {
       // Arrange
-      const specWithoutVersion = {
-        ...mockSpecification,
+      const specificationId = mockSpecId;
+      const mockSpec = {
+        id: specificationId,
+        title: 'Spec Without Versions',
+        description: 'No versions available',
         versions: [],
       };
-      prismaService.specification.findUnique.mockResolvedValue(specWithoutVersion);
 
-      // Act & Assert
-      await expect(service.storeSpecificationVersion('spec-123', 999)).rejects.toThrow(
-        'Specification version not found',
-      );
+      prismaService.specification.findUnique.mockResolvedValue(mockSpec as any);
+
+      // Act
+      const results = await service.getRelatedSpecifications(specificationId);
+
+      // Assert
+      expect(results).toEqual([]);
+      expect(memoryProvider.searchByText).not.toHaveBeenCalled();
     });
   });
 
-  describe('deleteSpecificationVectors', () => {
+  describe('storeSpecification', () => {
     beforeEach(async () => {
-      pineconeProvider.isAvailable.mockResolvedValue(true);
+      configService.get.mockReturnValue('memory');
+      memoryProvider.initialize.mockResolvedValue(undefined);
       await service.onModuleInit();
     });
 
-    it('should delete all vectors for specification', async () => {
+    it('should store specification with version content', async () => {
       // Arrange
-      pineconeProvider.deleteByFilter.mockResolvedValue(undefined);
+      const specification = {
+        id: mockSpecId,
+        title: 'Test Specification',
+        description: 'Test specification description',
+      };
+
+      const version = {
+        id: 'ver-123',
+        pmView: { overview: 'PM view content' },
+        frontendView: { framework: 'React', components: ['Header', 'Footer'] },
+        backendView: { services: ['API', 'Auth'] },
+      };
+
+      memoryProvider.upsert.mockResolvedValue(undefined);
+      prismaService.usageLog.create.mockResolvedValue({} as any);
 
       // Act
-      await service.deleteSpecificationVectors('spec-123');
+      const result = await service.storeSpecification(
+        specification,
+        version,
+        mockUserId,
+        mockTeamId
+      );
 
       // Assert
-      expect(pineconeProvider.deleteByFilter).toHaveBeenCalledWith({
-        specificationId: 'spec-123',
-      });
+      expect(memoryProvider.upsert).toHaveBeenCalledWith([
+        expect.objectContaining({
+          content: expect.stringContaining('PM view content'),
+          metadata: expect.objectContaining({
+            type: 'specification',
+            specificationId: mockSpecId,
+            versionId: 'ver-123',
+            userId: mockUserId,
+            teamId: mockTeamId,
+            title: 'Test Specification',
+          }),
+        }),
+      ]);
+
+      expect(result).toMatch(/^spe_/);
     });
   });
 
   describe('storeKnowledge', () => {
     beforeEach(async () => {
-      pineconeProvider.isAvailable.mockResolvedValue(true);
+      configService.get.mockReturnValue('memory');
+      memoryProvider.initialize.mockResolvedValue(undefined);
       await service.onModuleInit();
     });
 
     it('should store team knowledge', async () => {
       // Arrange
       const title = 'Team Guidelines';
-      const content = 'Our coding standards...';
-      const teamId = 'team-123';
-      const tags = ['guidelines', 'standards'];
+      const content = 'Team coding and process guidelines';
+      const tags = ['guidelines', 'process', 'team'];
 
-      llmService.generateEmbedding.mockResolvedValue(mockEmbedding);
+      memoryProvider.upsert.mockResolvedValue(undefined);
 
       // Act
-      const result = await service.storeKnowledge(title, content, teamId, tags);
+      const result = await service.storeKnowledge(title, content, mockTeamId, tags);
 
       // Assert
-      expect(pineconeProvider.upsert).toHaveBeenCalledWith([
+      expect(memoryProvider.upsert).toHaveBeenCalledWith([
         expect.objectContaining({
+          content,
           metadata: expect.objectContaining({
             type: 'knowledge',
-            teamId,
-            tags,
+            teamId: mockTeamId,
             title,
+            tags,
           }),
         }),
       ]);
+
       expect(result).toMatch(/^kno_/);
     });
   });
 
   describe('searchTeamKnowledge', () => {
     beforeEach(async () => {
-      pineconeProvider.isAvailable.mockResolvedValue(true);
+      configService.get.mockReturnValue('memory');
+      memoryProvider.initialize.mockResolvedValue(undefined);
       await service.onModuleInit();
     });
 
-    it('should search team knowledge base', async () => {
+    it('should search team-specific knowledge', async () => {
       // Arrange
-      const teamId = 'team-123';
-      const query = 'coding standards';
-      pineconeProvider.searchByText.mockResolvedValue([mockSearchResult]);
+      const query = 'team processes';
+      const options = { topK: 3 };
+      memoryProvider.searchByText.mockResolvedValue([mockSearchResult]);
 
       // Act
-      const results = await service.searchTeamKnowledge(teamId, query, { topK: 10 });
+      const results = await service.searchTeamKnowledge(mockTeamId, query, options);
 
       // Assert
-      expect(pineconeProvider.searchByText).toHaveBeenCalledWith(query, {
-        topK: 10,
-        filter: {
-          teamId,
-          type: 'knowledge',
-        },
+      expect(memoryProvider.searchByText).toHaveBeenCalledWith(query, {
+        topK: 3,
+        teamId: mockTeamId,
+        type: 'knowledge',
       });
+
       expect(results).toEqual([mockSearchResult]);
     });
   });
 
-  describe('provider fallback', () => {
-    it('should handle provider not available', async () => {
-      // Arrange
-      pineconeProvider.isAvailable.mockResolvedValue(false);
-      memoryProvider.isAvailable.mockResolvedValue(false);
-
-      // Act
+  describe('cleanup', () => {
+    beforeEach(async () => {
+      configService.get.mockReturnValue('memory');
+      memoryProvider.initialize.mockResolvedValue(undefined);
       await service.onModuleInit();
-
-      // Assert - should not throw but service won't work
-      expect(service['provider']).toBeUndefined();
     });
 
-    it('should work with memory provider', async () => {
+    it('should log cleanup not implemented message', async () => {
       // Arrange
-      configService.get.mockReturnValue('memory');
-      memoryProvider.isAvailable.mockResolvedValue(true);
-      await service.onModuleInit();
-
-      memoryProvider.searchByText.mockResolvedValue([mockSearchResult]);
+      const olderThan = new Date('2024-01-01');
+      const loggerSpy = jest.spyOn((service as any).logger, 'log').mockImplementation();
 
       // Act
-      const results = await service.searchSimilar('query');
+      await service.cleanup(olderThan);
 
       // Assert
-      expect(memoryProvider.searchByText).toHaveBeenCalled();
-      expect(results).toEqual([mockSearchResult]);
+      expect(loggerSpy).toHaveBeenCalledWith(
+        'Vector cleanup not implemented for current provider'
+      );
+    });
+  });
+
+  describe('generateDocumentId', () => {
+    it('should generate IDs with correct prefixes', () => {
+      // Arrange & Act
+      const knowledgeId = (service as any).generateDocumentId({ type: 'knowledge' });
+      const specificationId = (service as any).generateDocumentId({ type: 'specification' });
+      const contextId = (service as any).generateDocumentId({ type: 'context' });
+      const templateId = (service as any).generateDocumentId({ type: 'template' });
+
+      // Assert
+      expect(knowledgeId).toMatch(/^kno_/);
+      expect(specificationId).toMatch(/^spe_/);
+      expect(contextId).toMatch(/^con_/);
+      expect(templateId).toMatch(/^tem_/);
+    });
+
+    it('should generate unique IDs', () => {
+      // Arrange & Act
+      const id1 = (service as any).generateDocumentId({ type: 'knowledge' });
+      const id2 = (service as any).generateDocumentId({ type: 'knowledge' });
+
+      // Assert
+      expect(id1).not.toBe(id2);
+    });
+  });
+
+  describe('extractSpecificationContent', () => {
+    it('should extract and combine content from all views', () => {
+      // Arrange
+      const version = {
+        pmView: { overview: 'PM overview', goals: ['Goal 1', 'Goal 2'] },
+        frontendView: { framework: 'React', components: ['Header'] },
+        backendView: { architecture: 'Microservices', database: 'PostgreSQL' },
+      };
+
+      // Act
+      const result = (service as any).extractSpecificationContent(version);
+
+      // Assert
+      expect(result).toContain('PM overview');
+      expect(result).toContain('React');
+      expect(result).toContain('Microservices');
+      expect(result).toContain('PostgreSQL');
+      expect(result.split('\n\n')).toHaveLength(3); // Three views separated by double newlines
+    });
+
+    it('should handle missing views gracefully', () => {
+      // Arrange
+      const version = {
+        pmView: { overview: 'Only PM view' },
+        frontendView: null,
+        backendView: undefined,
+      };
+
+      // Act
+      const result = (service as any).extractSpecificationContent(version);
+
+      // Assert
+      expect(result).toContain('Only PM view');
+      expect(result).not.toContain('null');
+      expect(result).not.toContain('undefined');
+    });
+
+    it('should handle empty version object', () => {
+      // Arrange
+      const version = {};
+
+      // Act
+      const result = (service as any).extractSpecificationContent(version);
+
+      // Assert
+      expect(result).toBe('');
+    });
+  });
+
+  describe('error handling and edge cases', () => {
+    beforeEach(async () => {
+      configService.get.mockReturnValue('memory');
+      memoryProvider.initialize.mockResolvedValue(undefined);
+      await service.onModuleInit();
+    });
+
+    it('should handle provider initialization failure', async () => {
+      // Arrange
+      const error = new Error('Provider initialization failed');
+      memoryProvider.initialize.mockRejectedValue(error);
+
+      // Act & Assert
+      await expect(service.onModuleInit()).rejects.toThrow('Provider initialization failed');
+    });
+
+    it('should handle usage logging failures gracefully', async () => {
+      // Arrange
+      const document: KnowledgeDocument = {
+        content: 'Test content',
+        type: 'knowledge',
+        userId: mockUserId,
+      };
+
+      memoryProvider.upsert.mockResolvedValue(undefined);
+      prismaService.usageLog.create.mockRejectedValue(new Error('Logging failed'));
+
+      // Act & Assert
+      // Should not throw error even if usage logging fails
+      const result = await service.storeDocument(document);
+      expect(result).toMatch(/^kno_/);
+    });
+
+    it('should handle concurrent operations', async () => {
+      // Arrange
+      const documents: KnowledgeDocument[] = Array.from({ length: 5 }, (_, i) => ({
+        title: `Doc ${i}`,
+        content: `Content ${i}`,
+        type: 'knowledge',
+        userId: mockUserId,
+      }));
+
+      memoryProvider.upsert.mockResolvedValue(undefined);
+
+      // Act
+      const promises = documents.map(doc => service.storeDocument(doc));
+      const results = await Promise.all(promises);
+
+      // Assert
+      expect(results).toHaveLength(5);
+      results.forEach(result => {
+        expect(result).toMatch(/^kno_/);
+      });
+      expect(memoryProvider.upsert).toHaveBeenCalledTimes(5);
     });
   });
 });
